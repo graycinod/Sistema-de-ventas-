@@ -1,3 +1,4 @@
+# Importación de clases necesarias de Kivy
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.recycleview import RecycleView
@@ -7,9 +8,8 @@ from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.popup import Popup
-from kivy.properties import StringProperty
-#Lista de diccionario que usaremos de prueba para verificar el funcionamiento de el sistema respecto a los productos.
 
+# Lista de productos de ejemplo (simula un inventario)
 inventario=ventas = [
     {'codigo': '1001',
     'nombre': 'Pan',
@@ -40,51 +40,48 @@ inventario=ventas = [
         "cantidad": 1
     }
 ]
+
+# Clase que permite selección dentro de un RecycleView
 #Permite que los elementos en un RecycleView 
 # se puedan seleccionar y navegar usando el teclado o mouse.
-
 class SelectableRecycleBoxLayout(FocusBehavior, LayoutSelectionBehavior,
                                  RecycleBoxLayout):
-    ''' Adds selection and focus behavior to the view. '''
-    touch_deselect_last= BooleanProperty(True)
-#Hace que cada elemento de texto en la lista sea seleccionable. Se usa dentro del RecycleView.
-#Atributos y métodos:
-#selected: si está seleccionado o no.
-#refresh_view_attrs: actualiza atributos cuando cambia la vista.
-#on_touch_down: detecta el toque y selecciona el elemento.
-#apply_selection: imprime el cambio de selección (por consola).
+    ''' Adds selection and focus behaviour to the view. '''
+    touch_deselect_last = BooleanProperty(True)
 
-class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
+# Clase para representar un ítem seleccionable dentro del carrito de compras
+class SelectableBoxLayout(RecycleDataViewBehavior, BoxLayout):
     ''' Add selection support to the Label '''
     index = None
     selected = BooleanProperty(False)
     selectable = BooleanProperty(True)
 
     def refresh_view_attrs(self, rv, index, data):
-       self.index=index
-       self.ids['_hashtag'].text = str(1+index)
-       self.ids['_articulo'].tex = data['nombre'].capitalize()
-       self.ids['_cantidad'].text = str(data['cantidad_carrito'])
-       self.ids['_precio_por_articulo'].text =str("{:.2f}".format(data['precio']))
-       self.ids['_precio'].text = str("{:.2f}".format(data['precio_total']))
-       return super(SelectableBoxLayout, self).refresh_view_attrs(
-        rv, index, data)
+        # Se actualizan los atributos visuales de cada fila
+        self.index = index
+        self.ids['_hashtag'].text = str(1+index)
+        self.ids['_articulo'].text = data['nombre'].capitalize()
+        self.ids['_cantidad'].text = str(data['cantidad_carrito'])
+        self.ids['_precio_por_articulo'].text = str("{:.2f}".format(data['precio']))
+        self.ids['_precio'].text = str("{:.2f}".format(data['precio_total']))
+        return super(SelectableBoxLayout, self).refresh_view_attrs(
+            rv, index, data)
 
     def on_touch_down(self, touch):
-        ''' Add selection on touch down '''
+        # Detecta el toque para seleccionar el ítem
         if super(SelectableBoxLayout, self).on_touch_down(touch):
             return True
         if self.collide_point(*touch.pos) and self.selectable:
             return self.parent.select_with_touch(self.index, touch)
 
     def apply_selection(self, rv, index, is_selected):
-        ''' Respond to the selection of items in the view. '''
+        # Cambia el estado de seleccionado y lo guarda en data
         self.selected = is_selected
         if is_selected:
-            print("selection changed to {0}".format(rv.data[index]))
+            rv.data[index]['seleccionado']=True
         else:
-            print("selection removed for {0}".format(rv.data[index]))
-
+            rv.data[index]['seleccionado']=False
+# Clase para representar un ítem seleccionable en el popup de búsqueda por nombre
 class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
     ''' Add selection support to the Label '''
     index = None
@@ -92,13 +89,14 @@ class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
     selectable = BooleanProperty(True)
 
     def refresh_view_attrs(self, rv, index, data):
-       self.index=index
-       self.ids['_codigo'].text= data['codigo']
-       self.ids['_articulo'].text= data['nombre'].capitalize()
-       self.ids['_cantidad'].text= str(data['cantidad'])
-       self.ids['_precio'].text=str['{:.2f}'.format(data['precio'])]
-       return super(SelectableBoxLayoutPopup, self).refresh_view_attrs(
-        rv, index, data)
+        # Actualiza los valores visuales de cada fila en el popup
+        self.index = index
+        self.ids['_codigo'].text = data['codigo']
+        self.ids['_articulo'].text = data['nombre'].capitalize()
+        self.ids['_cantidad'].text = str(data['cantidad'])
+        self.ids['_precio'].text = str("{:.2f}".format(data['precio']))
+        return super(SelectableBoxLayoutPopup, self).refresh_view_attrs(
+            rv, index, data)
 
     def on_touch_down(self, touch):
         ''' Add selection on touch down '''
@@ -111,20 +109,20 @@ class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
         ''' Respond to the selection of items in the view. '''
         self.selected = is_selected
         if is_selected:
-            print("selection changed to {0}".format(rv.data[index]))
+            rv.data[index]['seleccionado']=True
         else:
-            print("selection removed for {0}".format(rv.data[index]))
+            rv.data[index]['seleccionado']=False
 
-#Es la lista que muestra los elementos. Aquí genera 100 elementos de ejemplo (0 a 99) como etiquetas
-
+# Clase que contiene y gestiona la lista del RecycleView
 class RV(RecycleView):
     def __init__(self, **kwargs):
         super(RV, self).__init__(**kwargs)
-        self.data = []
+        self.data = []# Lista de datos mostrados
 
     def agregar_articulo(self, articulo):
-        articulo['seleccionar']= False
-        indice= -1
+        # Agrega un artículo a la lista o incrementa su cantidad si ya existe
+        articulo['seleccionado']=False
+        indice=-1
         if self.data:
             for i in range(len(self.data)):
                 if articulo['codigo']==self.data[i]['codigo']:
@@ -134,57 +132,89 @@ class RV(RecycleView):
                 self.data[indice]['precio_total']=self.data[indice]['precio']*self.data[indice]['cantidad_carrito']
                 self.refresh_from_data()
             else:
-                self.data.append(articulo) 
+                self.data.append(articulo)
         else:
             self.data.append(articulo)
+
+    def articulo_seleccionado(self):
+        # Retorna el índice del artículo seleccionado
+        indice=-1
+        for i in range(len(self.data)):
+            if self.data[i]['seleccionado']:
+                indice=i
+                break
+        return indice
+
+# Popup que aparece al buscar un producto por nombre
 class ProductoPorNombrePopup(Popup):
-    def __init__(self,input_nombre, **kwargs):
-       super(ProductoPorNombrePopup, self).__init__(**kwargs)
-       self.input_nombre=input_nombre
+    def __init__(self, input_nombre, agregar_producto_callback, **kwargs):
+        super(ProductoPorNombrePopup, self).__init__(**kwargs)
+        self.input_nombre=input_nombre
+        self.agregar_producto=agregar_producto_callback# Función que agrega el producto al carrito
 
     def mostrar_articulos(self):
+        # Muestra los productos cuyo nombre coincide parcial o totalmente
         self.open()
         for nombre in inventario:
-            if nombre['nombre'].lower().find(self.input_nombre)>=0:#lower coloca en mayusculas,find :busca el parametro ingresado por el usuario
-                producto={
-                'codigo': nombre ['codigo'],
-                'nombre': nombre ['nombre'],
-                'precio': nombre ['precio'],
-                'cantidad':nombre['cantidad']}
+            if nombre['nombre'].lower().find(self.input_nombre)>=0:
+                producto={'codigo': nombre['codigo'], 'nombre': nombre['nombre'], 'precio': nombre['precio'], 'cantidad': nombre['cantidad']}
                 self.ids.rvs.agregar_articulo(producto)
-#Contenedor principal de la interfaz. Hereda de BoxLayout, lo que organiza los widgets en filas o columnas.
 
+    def seleccionar_articulo(self):
+        # Permite al usuario seleccionar un producto del popup
+        indice=self.ids.rvs.articulo_seleccionado()
+        if indice>=0:
+            _articulo=self.ids.rvs.data[indice]
+            articulo={}
+            articulo['codigo']=_articulo['codigo']
+            articulo['nombre']=_articulo['nombre']
+            articulo['precio']=_articulo['precio']
+            articulo['cantidad_carrito']=1
+            articulo['cantidad_inventario']=_articulo['cantidad']
+            articulo['precio_total']=_articulo['precio']
+            if callable(self.agregar_producto):
+                self.agregar_producto(articulo)
+            self.dismiss()
+
+
+# Ventana principal de ventas
 class VentasWindow(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.total=0.0
 
     def agregar_producto_codigo(self, codigo):
+        # Agrega un producto al carrito buscando por código
         for producto in inventario:
-            if codigo == producto['codigo']:
+            if codigo==producto['codigo']:
                 articulo={}
-                articulo['codigo']= producto['codigo']
-                articulo['nombre']= producto['nombre']
-                articulo['precio']= producto['precio']
-                articulo['cantidad_carrito']= 1
-                articulo['cantidad_inventario']=producto['cantidad'] 
-                articulo['precio_total']= producto['precio']
+                articulo['codigo']=producto['codigo']
+                articulo['nombre']=producto['nombre']
+                articulo['precio']=producto['precio']
+                articulo['cantidad_carrito']=1
+                articulo['cantidad_inventario']=producto['cantidad']
+                articulo['precio_total']=producto['precio']
                 self.agregar_producto(articulo)
                 self.ids.buscar_codigo.text=''
                 break
 
-
     def agregar_producto_nombre(self, nombre):
+        # Llama al popup de búsqueda por nombre
         self.ids.buscar_nombre.text=''
-        popup=ProductoPorNombrePopup(nombre)
+        popup=ProductoPorNombrePopup(nombre, self.agregar_producto)
         popup.mostrar_articulos()
 
     def agregar_producto(self, articulo):
+        # Suma el precio del producto y lo añade al RecycleView
         self.total+=articulo['precio']
-        self.ids.sub_total.text='$'+"{: .2f}".format(self.total)
+        self.ids.sub_total.text= '$ '+"{:.2f}".format(self.total)
         self.ids.rvs.agregar_articulo(articulo)
 
+    # Métodos de acción que puedes completar más adelante
     def eliminar_producto(self):
+        print("eliminar_producto presionado")
+
+    def modificar_producto(self):
         print("eliminar_producto presionado")
 
     def pagar(self):
@@ -192,22 +222,18 @@ class VentasWindow(BoxLayout):
 
     def nueva_compra(self):
         print("nueva_compra")
-        
-    def modificar_producto(self):
-        print("modificar_producto presionado") 
 
     def admin(self):
-        print("admin presionado")
+        print("Admin presionado")
 
     def signout(self):
-        print("signout presionado")
-
-#Es la aplicación principal. Kivy ejecuta esta clase y llama a build() para mostrar la interfaz que retorna VentasWindow.
-
+        print("Signout presionado")
+        
+# Clase principal que inicia la aplicación
 class VentasApp(App):
     def build(self):
         return VentasWindow()
 
-
-if __name__ == '__main__':
+# Punto de entrada de la aplicación
+if __name__=='__main__':
     VentasApp().run()
