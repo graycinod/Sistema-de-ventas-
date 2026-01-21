@@ -175,7 +175,16 @@ class ProductoPorNombrePopup(Popup):
         self.cb_agregar(articulo)
         self.dismiss()
 
-
+class ModificarCantidadPopup(Popup):
+    """Para modificar manualmente la cantidad de productos del carrito"""
+    def __init__(self,item,on_confirmar,**kwargs):
+        super().__init__(**kwargs)
+        self.item=item   #producto a modificar
+        self._callback=on_confirmar#Callback al confirmar
+    def confirmar(self):
+        texto =self.ids.input_cantidad.text
+        self._callback(texto)
+        self.dismiss()
 # ------------------------------
 #      VENTANA PRINCIPAL
 # ------------------------------
@@ -224,8 +233,7 @@ class VentasWindow(BoxLayout):
 
     # ---- LIMPIAR NOTIFICACIONES ----
     def _limpiar_notificacion(self, dt):
-        self.ids.notificacion_fall.text = ''
-        self.ids.notificacion_exitp.text = ''
+        self.ids.notificacion_exito.text = ''
 
     # ------------------------------
     #      ⭐  ELIMINAR PRODUCTO
@@ -236,7 +244,7 @@ class VentasWindow(BoxLayout):
         if not rv.data:
             self.ids.notificacion_exito.text = "No hay artículos en el carrito."
             Clock.schedule_once(self._limpiar_notificacion, 3)
-        return
+            return
 
         # Verificar si hay selección
         hay_sel = any(item.get('seleccionado', False) for item in rv.data)
@@ -261,6 +269,98 @@ class VentasWindow(BoxLayout):
     # ---- MÉTODOS VACÍOS ----
     def modificar_producto(self):
         print("modificar_producto presionado")
+        """
+        Modifica la cantidad del producto seleccionado en el carrito.
+
+        Funcionamiento:
+        1. Verifica si el carrito contiene artículos.
+        2. Comprueba que exista un producto seleccionado.
+        3. Valida que no se supere la cantidad disponible en inventario.
+        4. Incrementa la cantidad del producto seleccionado.
+        5. Actualiza el precio total del producto.
+        6. Refresca el RecycleView y recalcula el total de la compra.
+        7. Muestra un mensaje informativo al usuario.
+
+        Este método evita cierres inesperados de la aplicación y garantiza
+        que solo se modifique un producto válido.
+        """
+
+        rv = self.ids.rvs  # Referencia al RecycleView del carrito
+
+        # 1. Verificar si el carrito está vacío
+        if not rv.data:
+            self.ids.notificacion_exito.text = "No hay artículos en el carrito."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+        # 2. Obtener el índice del producto seleccionado
+        indice = rv.articulo_seleccionado()
+        if indice < 0:
+            self.ids.notificacion_exito.text = "Seleccione un artículo para modificar."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+        # 3. Obtener el producto seleccionado
+        item = rv.data[indice]
+
+        #Abrir Popup
+        popup=ModificarCantidadPopup(
+            item=item,
+            on_confirmar=self._confirmar_cantidad
+        )
+        popup.open()
+
+        # 4. Validar disponibilidad en inventario
+        if item['cantidad_carrito'] >= item['cantidad_inventario']:
+            self.ids.notificacion_exito.text = "No hay más unidades disponibles."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+        # 5. Incrementar la cantidad del producto
+        item['cantidad_carrito'] += 1
+
+        # 6. Recalcular el precio total del producto
+        item['precio_total'] = item['cantidad_carrito'] * item['precio']
+
+        # 7. Actualizar la vista y recalcular el total general
+        rv.refresh_from_data()
+        self.recalcular_total()
+
+        # 8. Notificar al usuario
+        self.ids.notificacion_exito.text = "Producto modificado correctamente."
+        Clock.schedule_once(self._limpiar_notificacion, 3)
+    def _confirmar_cantidad(self, texto):
+        try:
+            nueva = int(texto)
+        except ValueError:
+            self.ids.notificacion_exito.text = "Cantidad inválida."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+        
+        rv = self.ids.rvs
+        indice = rv.articulo_seleccionado()
+
+        if indice < 0:
+            return
+
+        item = rv.data[indice]
+
+        if nueva > item['cantidad_inventario']:
+            self.ids.notificacion_exito.text = "Cantidad supera el inventario."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+        # Actualizar datos
+        item['cantidad_carrito'] = nueva
+        item['precio_total'] = nueva * item['precio']
+
+        rv.refresh_from_data()
+        self.recalcular_total()
+
+        self.ids.notificacion_exito.text = "Cantidad actualizada correctamente."
+        Clock.schedule_once(self._limpiar_notificacion, 3)
+
+
 
     def pagar(self):
         print("pagar")

@@ -140,6 +140,45 @@
                 on_release: root.dismiss()
 
 # -------------------------
+# Popop para modificar la cantidad de productos
+# -------------------------
+<ModificarCantidadPopup>:
+    title:"Modificar cantidad"
+    size_hint: 0.5, 0.4
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        spacing:10
+        padding:10
+
+        Label:
+            text:"Ingrese la nueva cantidad"
+            size_hint_y:None
+            height: "40dp"
+
+        TextInput:
+            id: input_cantidad
+            hint_text: "Cantidad"
+            input_filter: "int"
+            multiline: False
+            size_hint_y: None
+            height: "40dp"
+
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 10
+
+            Button:
+                text: "Cancelar"
+                on_release: root.dismiss()
+
+            Button:
+                text: "Confirmar"
+                on_release: root.confirmar()
+
+    # -------------------------
 # VENTANA PRINCIPAL DE VENTAS
 # -------------------------
 <VentasWindow>:
