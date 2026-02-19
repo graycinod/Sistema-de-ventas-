@@ -13,6 +13,7 @@ from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior 
 from kivy.uix.popup import Popup 
 from kivy.clock import Clock
+from kivy.properties import NumericProperty
 
 
 # ------------------------------
@@ -180,11 +181,24 @@ class ModificarCantidadPopup(Popup):
     def __init__(self,item,on_confirmar,**kwargs):
         super().__init__(**kwargs)
         self.item=item   #producto a modificar
-        self._callback=on_confirmar#Callback al confirmar
+        self.on_confirmar=on_confirmar#Callback al confirmar
     def confirmar(self):
         texto =self.ids.input_cantidad.text
-        self._callback(texto)
+        self.on_confirmar(texto)
         self.dismiss()
+
+class ConfirmarPagoPopup(Popup):
+    total = NumericProperty(0.0)
+
+    def __init__(self,total,confirmar_callback, **kwargs):
+        super().__init__(**kwargs)
+        self.total=total
+        self.confirmar_callback=confirmar_callback
+
+    def confirmar(self):
+        self.confirmar_callback()
+        self.dismiss()
+        
 # ------------------------------
 #      VENTANA PRINCIPAL
 # ------------------------------
@@ -192,7 +206,8 @@ class VentasWindow(BoxLayout):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.total = 0.0
+        self.sub_total = 0.0
+        self.total=0.0
 
     # ---- AGREGAR POR CÓDIGO ----
     def agregar_producto_codigo(self, codigo):
@@ -221,6 +236,7 @@ class VentasWindow(BoxLayout):
     def agregar_producto(self, articulo):
         self.total += articulo['precio']
         self.ids.sub_total.text = '$ ' + "{:.2f}".format(self.total)
+        self.ids.total.text = '$ ' + "{:.2f}".format(self.total)
         self.ids.rvs.agregar_articulo(articulo)
 
     # ---- RE-CALCULAR TOTAL ----
@@ -236,7 +252,7 @@ class VentasWindow(BoxLayout):
         self.ids.notificacion_exito.text = ''
 
     # ------------------------------
-    #      ⭐  ELIMINAR PRODUCTO
+    #        ELIMINAR PRODUCTO
     # ------------------------------
     def eliminar_producto(self):
         rv = self.ids.rvs
@@ -339,8 +355,16 @@ class VentasWindow(BoxLayout):
         
         rv = self.ids.rvs
         indice = rv.articulo_seleccionado()
+        if nueva <= 0:
+            self.ids.notificacion_exito.text = "La cantidad debe ser mayor a cero."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+       
 
         if indice < 0:
+            self.ids.notificacion_exito.text = "No hay producto seleccionado."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
             return
 
         item = rv.data[indice]
@@ -363,7 +387,28 @@ class VentasWindow(BoxLayout):
 
 
     def pagar(self):
-        print("pagar")
+        if not self.ids.rvs.data:
+            self.ids.notificacion_exito.text = "No hay productos a pagar."
+            Clock.schedule_once(self._limpiar_notificacion, 3)
+            return
+
+        popup = ConfirmarPagoPopup(
+            total=self.total,
+            confirmar_callback=self.confirmar_pago
+        )
+        popup.open()
+
+    def confirmar_pago(self):
+        self.ids.notificacion_exito.text = "Pago realizado con éxito ✅"
+        Clock.schedule_once(self._limpiar_notificacion, 3)
+
+        # Limpiar carrito
+        self.ids.rvs.data = []
+        self.sub_total = 0.0
+        self.total = 0.0
+
+        self.ids.sub_total.text = "$ 0.00"
+        self.ids.total.text = "$ 0.00"
 
     def nueva_compra(self):
         print("nueva_compra")

@@ -178,7 +178,49 @@
                 text: "Confirmar"
                 on_release: root.confirmar()
 
-    # -------------------------
+<ConfirmarPagoPopup>:
+    title: "Confirmar pago"
+    size_hint: 0.8, 0.4
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 20
+        spacing: 15
+
+        Label:
+            text: "Total a pagar"
+            font_size: "20sp"
+            bold: True
+            size_hint_y: None
+            height: "40dp"
+
+        Label:
+            text: "$ {:.2f}".format(root.total)
+            font_size: "26sp"
+            color: 0, 0.6, 0, 1
+            bold: True
+
+        Widget:
+            size_hint_y: None
+            height: "10dp"
+
+        BoxLayout:
+            size_hint_y: None
+            height: "50dp"
+            spacing: 10
+
+            Button:
+                text: "Cancelar"
+                background_color: 0.8, 0.2, 0.2, 1
+                on_release: root.dismiss()
+
+            Button:
+                text: "Pagar"
+                background_color: 0.2, 0.7, 0.2, 1
+                on_release: root.confirmar()
+
+# -------------------------
 # VENTANA PRINCIPAL DE VENTAS
 # -------------------------
 <VentasWindow>:
