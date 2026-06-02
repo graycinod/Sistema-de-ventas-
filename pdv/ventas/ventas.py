@@ -6,6 +6,7 @@
 from kivy.app import App  
 from kivy.uix.boxlayout import BoxLayout 
 from kivy.uix.recycleview import RecycleView 
+from kivy.properties import StringProperty
 from kivy.uix.recycleview.views import RecycleDataViewBehavior 
 from kivy.properties import BooleanProperty 
 from kivy.uix.recycleboxlayout import RecycleBoxLayout 
@@ -14,22 +15,19 @@ from kivy.uix.recycleview.layout import LayoutSelectionBehavior
 from kivy.uix.popup import Popup 
 from kivy.clock import Clock
 from kivy.properties import NumericProperty
-
+from database import insertar_producto, obtener_productos, buscar_producto
+from database import obtener_productos, actualizar_stock
+from database import actualizar_producto, eliminar_producto
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
 
 # ------------------------------
 #         INVENTARIO
 # ------------------------------
-inventario = [
-    {'codigo': '1001', 'nombre': 'Pan', 'precio': 1000, 'cantidad': 2},
-    {'codigo': '1002', 'nombre': 'Leche', 'precio': 3500, 'cantidad': 1},
-    {'codigo': '1003', 'nombre': 'Huevos x12', 'precio': 7800, 'cantidad': 1},
-    {'codigo': '1004', 'nombre': 'Queso 250g', 'precio': 5600, 'cantidad': 3},
-    {'codigo': '1005', 'nombre': 'Café 500g', 'precio': 8500, 'cantidad': 1}
-]
 
 
 # ------------------------------
-#   CLASES PARA SELECCIÓN RV
+#   CLASES PARA SELECCIÓN carrito_rv
 # ------------------------------
 class SelectableRecycleBoxLayout(FocusBehavior, LayoutSelectionBehavior, RecycleBoxLayout):
     """Layout que permite seleccionar elementos dentro del RecycleView."""
@@ -43,7 +41,7 @@ class SelectableBoxLayout(RecycleDataViewBehavior, BoxLayout):
     selected = BooleanProperty(False)
     selectable = BooleanProperty(True)
 
-    def refresh_view_attrs(self, rv, index, data):
+    def refresh_view_attrs(self, carrito_rv, index, data):
         """Actualiza los textos de cada columna."""
         self.index = index
         
@@ -53,7 +51,7 @@ class SelectableBoxLayout(RecycleDataViewBehavior, BoxLayout):
         self.ids['_cantidad'].text = str(data['cantidad_carrito'])
         self.ids['_precio_por_articulo'].text = "{:.2f}".format(data['precio'])
         self.ids['_precio'].text = "{:.2f}".format(data['precio_total'])
-        return super().refresh_view_attrs(rv, index, data)
+        return super().refresh_view_attrs(carrito_rv, index, data)
 
     def on_touch_down(self, touch):
         """Detecta el toque para seleccionar la fila."""
@@ -62,39 +60,141 @@ class SelectableBoxLayout(RecycleDataViewBehavior, BoxLayout):
         if self.collide_point(*touch.pos) and self.selectable:
             return self.parent.select_with_touch(self.index, touch)
 
-    def apply_selection(self, rv, index, is_selected):
+    def apply_selection(self, carrito_rv, index, is_selected):
         """Marca internamente si la fila está seleccionada."""
         self.selected = is_selected
-        rv.data[index]['seleccionado'] = is_selected
+        carrito_rv.data[index]['seleccionado'] = is_selected
 
-# ------------------------------
-#   SELECTOR PARA EL POPUP
-# ------------------------------
-class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
-    """Versión usada en el popup de buscar producto por nombre."""
+        if is_selected:
+            app = App.get_running_app()
+            app.root.inventario_seleccionado = carrito_rv.data[index]
 
-    index = None
+# Popup para agregar productos al inventario
+
+class AgregarProductoPopup(Popup):
+    def __init__(self, on_guardar, **kwargs):
+        super().__init__(**kwargs)
+        self.on_guardar = on_guardar
+
+    def guardar(self):
+        try:
+            codigo = self.ids.codigo.text
+            nombre = self.ids.nombre.text
+            precio = float(self.ids.precio.text)
+            cantidad = int(self.ids.cantidad.text)
+
+            self.on_guardar(codigo, nombre, precio, cantidad)
+
+            # Limpiar campos
+            self.ids.codigo.text = ""
+            self.ids.nombre.text = ""
+            self.ids.precio.text = ""
+            self.ids.cantidad.text = ""
+
+            self.dismiss()  #  cerrar popup
+
+        except ValueError:
+            self.ids.mensaje.text = "Datos inválidos"
+#Ver producto del inventario en popup
+class VerInventarioPopup(Popup):
+
+    def cargar_datos(self):
+        productos = obtener_productos()
+
+        data = []
+        for p in productos:
+            data.append({
+                "id_producto": p[0], 
+                "codigo": str(p[1]),
+                "nombre": p[2],
+               "precio":str(p[3]),
+                "cantidad": str(p[4])
+                })
+        self.ids.rv_inventario.data = data
+
+    def editar_item(self):
+        app = App.get_running_app()
+        item = app.root.inventario_seleccionado
+
+        if item:
+            app.root.abrir_popup_editar_inventario(item)
+        else:
+            print("No hay producto seleccionado")
+
+    def eliminar_item(self):
+        app = App.get_running_app()
+        item = app.root.inventario_seleccionado
+
+        if item:
+            eliminar_producto(item['id_producto'])
+            self.cargar_datos()
+        else:
+            print("No hay producto seleccionado")
+
+
+class FilaInventario(RecycleDataViewBehavior, BoxLayout):
+    id_producto = NumericProperty(0)
+    codigo = StringProperty("")
+    nombre = StringProperty("")
+    precio = StringProperty("")
+    cantidad = StringProperty("")
+    index = NumericProperty(0)
+
     selected = BooleanProperty(False)
     selectable = BooleanProperty(True)
 
     def refresh_view_attrs(self, rv, index, data):
         self.index = index
-        self.ids['_codigo'].text = data['codigo']
-        self.ids['_articulo'].text = data['nombre'].capitalize()
-        self.ids['_cantidad'].text = str(data['cantidad'])
-        self.ids['_precio'].text = "{:.2f}".format(data['precio'])
+        self.id_producto = data.get("id_producto", 0)
+        self.codigo = data['codigo']
+        self.nombre = data['nombre']
+        self.precio = data['precio']
+        self.cantidad = data['cantidad']
         return super().refresh_view_attrs(rv, index, data)
 
     def on_touch_down(self, touch):
         if super().on_touch_down(touch):
             return True
-        if self.collide_point(*touch.pos):
+        if self.collide_point(*touch.pos) and self.selectable:
             return self.parent.select_with_touch(self.index, touch)
 
     def apply_selection(self, rv, index, is_selected):
         self.selected = is_selected
         rv.data[index]['seleccionado'] = is_selected
-        
+
+        if is_selected:
+            app = App.get_running_app()
+            app.root.inventario_seleccionado = rv.data[index]
+
+class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
+    index = None
+    selected = BooleanProperty(False)
+    selectable = BooleanProperty(True)
+
+    def refresh_view_attrs(self, carrito_rv, index, data):
+        self.index = index
+        self.ids['_codigo'].text = data['codigo']
+        self.ids['_articulo'].text = data['nombre'].capitalize()
+        self.ids['_cantidad'].text = str(data['cantidad'])
+        self.ids['_precio'].text = "{:.2f}".format(data['precio'])
+        return super().refresh_view_attrs(carrito_rv, index, data)
+
+    def on_touch_down(self, touch):
+        if super().on_touch_down(touch):
+            return True
+        if self.collide_point(*touch.pos) and self.selectable:
+            return self.parent.select_with_touch(self.index, touch)
+
+    def apply_selection(self, carrito_rv, index, is_selected):
+        self.selected = is_selected
+
+        #!importante!llamado de seleccion de producto
+        carrito_rv.data[index]['seleccionado'] = is_selected
+
+
+        if is_selected:
+            app = App.get_running_app()
+            app.root.inventario_seleccionado = carrito_rv.data[index]
 
 # ------------------------------
 #   MANEJO DEL RECYCLEVIEW
@@ -144,25 +244,27 @@ class ProductoPorNombrePopup(Popup):
         self.cb_agregar = cb_agregar
 
     def mostrar_articulos(self):
-        """Llena el popup con los productos que coinciden."""
         self.open()
-        for prod in inventario:
-            if prod['nombre'].lower().find(self.nombre) >= 0:
-                self.ids.rvs.agregar_articulo({
-                    'codigo': prod['codigo'],
-                    'nombre': prod['nombre'],
-                    'precio': prod['precio'],
-                    'cantidad': prod['cantidad'],
+        inventario = obtener_productos()  # 👈 traer desde BD
+
+        for p in inventario:
+            if self.nombre.lower() in p[2].lower():
+                self.ids.carrito_rv.agregar_articulo({
+                    'codigo': p[1],
+                    'nombre': p[2],
+                    'precio': p[3],
+                    'cantidad': p[4],
                     'seleccionado': False
                 })
 
     def seleccionar_articulo(self):
         """Agrega el artículo seleccionado desde el popup al carrito principal."""
-        indice = self.ids.rvs.articulo_seleccionado()
+        print(self.ids.carrito_rv.data)
+        indice = self.ids.carrito_rv.articulo_seleccionado()
         if indice < 0:
             return
 
-        prod = self.ids.rvs.data[indice]
+        prod = self.ids.carrito_rv.data[indice]
 
         articulo = {
             'codigo': prod['codigo'],
@@ -208,9 +310,78 @@ class VentasWindow(BoxLayout):
         super().__init__(**kwargs)
         self.sub_total = 0.0
         self.total=0.0
+        self.inventario_seleccionado = None
+
+#Agregar inventario SQLite
+
+    def cargar_inventario(self):
+        datos = obtener_productos()
+
+        inventario = []
+        for p in datos:
+            inventario.append({
+                'codigo': p[1],
+                'nombre': p[2],
+                'precio': p[3],
+                'cantidad': p[4]
+            })
+        return inventario
+
+#Editar inventario
+    def abrir_popup_editar_inventario(self, item):
+
+        layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+
+        nombre = TextInput(text=item['nombre'])
+        precio = TextInput(text=str(item['precio']))
+        cantidad = TextInput(text=str(item['cantidad']))
+        #botones 
+
+        btn_guardar = Button(text="Guardar")
+        btn_cerrar = Button(text="Cerrar")
+
+        layout.add_widget(nombre)
+        layout.add_widget(precio)
+        layout.add_widget(cantidad)
+
+        botones = BoxLayout(size_hint_y=None, height=50, spacing=10)
+        botones.add_widget(btn_guardar)
+        botones.add_widget(btn_cerrar)
+
+        layout.add_widget(botones)
+
+        popup = Popup(title="Editar producto", content=layout, size_hint=(0.7, 0.6))
+
+        def guardar(*args):
+            actualizar_producto(
+                item['id_producto'],
+                item['codigo'],
+                nombre.text,
+                float(precio.text),
+                int(cantidad.text)
+            )
+            popup.dismiss()
+            self.abrir_popup_inventario()
+        btn_guardar.bind(on_release=guardar)
+        btn_cerrar.bind(on_release=popup.dismiss)
+        popup.open()
+
+
+#Abrir ventana popup
+
+    def abrir_popup_agregar(self):
+        popup = AgregarProductoPopup(on_guardar=self.guardar_producto)
+        popup.open()
+    #Abrir ventana de inventario
+
+    def abrir_popup_inventario(self):
+        popup = VerInventarioPopup()
+        popup.open()
+        popup.cargar_datos()
 
     # ---- AGREGAR POR CÓDIGO ----
     def agregar_producto_codigo(self, codigo):
+        inventario = self.cargar_inventario()
         for p in inventario:
             if codigo == p['codigo']:
                 articulo = {
@@ -224,7 +395,7 @@ class VentasWindow(BoxLayout):
                 }
                 self.agregar_producto(articulo)
                 self.ids.buscar_codigo.text = ''
-                break
+                break   
 
     # ---- AGREGAR POR NOMBRE ----
     def agregar_producto_nombre(self, nombre):
@@ -237,12 +408,67 @@ class VentasWindow(BoxLayout):
         self.total += articulo['precio']
         self.ids.sub_total.text = '$ ' + "{:.2f}".format(self.total)
         self.ids.total.text = '$ ' + "{:.2f}".format(self.total)
-        self.ids.rvs.agregar_articulo(articulo)
+        self.ids.carrito_rv.agregar_articulo(articulo)
+
+    #----GUARDAR PRODUCTOS ----
+    def guardar_producto(self, codigo, nombre, precio, cantidad):
+        try:
+            insertar_producto(codigo, nombre, precio, cantidad)
+        except Exception as e:
+            self.ids.notificacion_exito.text = "Error al guardar producto ya existe ese codigo"
+            print("ERROR INSERTAR:", e)
+            return
+
+        # Esto ya no rompe el guardado
+        try:
+            self.mostrar_productos()
+        except Exception as e:
+            print("ERROR MOSTRAR:", e)
+
+        self.ids.notificacion_exito.text = "Producto guardado correctamente"
+        Clock.schedule_once(self._limpiar_notificacion, 3)          
+
+
+    #----MOSTRAR PRODUCTO----
+    def mostrar_productos(self):
+        productos = obtener_productos()
+
+        self.ids.rv_inventario.data = [
+            {
+                "codigo": p[1],
+                "nombre": p[2],
+                "precio": p[3],
+                "cantidad": p[4],
+                "cantidad_carrito": 1,
+                "cantidad_inventario": p[4],
+                "precio_total": p[3],
+                "seleccionado": False
+            }
+            for p in productos
+        ]
+    #---BUSCAR PRODUCTO---
+    def buscar_producto(self):
+        texto = self.ids.buscar.text
+        resultados = buscar_producto(texto)
+
+        self.ids.rv_inventario.data = [
+            {
+                "codigo": p[1],
+                "nombre": p[2],
+                "precio": p[3],
+                "cantidad": p[4],
+                "cantidad_carrito": 1,
+                "cantidad_inventario": p[4],
+                "precio_total": p[3],
+                "seleccionado": False
+            }
+            for p in resultados
+        ]
 
     # ---- RE-CALCULAR TOTAL ----
     def recalcular_total(self):
         nuevo = 0.0
-        for item in self.ids.rvs.data:
+        for item in self.ids.carrito_rv.data:
             nuevo += float(item['precio_total'])
         self.total = nuevo
         self.ids.sub_total.text = '$ ' + "{:.2f}".format(self.total)
@@ -255,15 +481,15 @@ class VentasWindow(BoxLayout):
     #        ELIMINAR PRODUCTO
     # ------------------------------
     def eliminar_producto(self):
-        rv = self.ids.rvs
+        carrito_rv = self.ids.carrito_rv
         # No hay artículos
-        if not rv.data:
+        if not carrito_rv.data:
             self.ids.notificacion_exito.text = "No hay artículos en el carrito."
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
 
         # Verificar si hay selección
-        hay_sel = any(item.get('seleccionado', False) for item in rv.data)
+        hay_sel = any(item.get('seleccionado', False) for item in carrito_rv.data)
         if not hay_sel:
             self.ids.notificacion_exito.text = "Seleccione un artículo para borrar."
             Clock.schedule_once(self._limpiar_notificacion, 3)
@@ -271,12 +497,12 @@ class VentasWindow(BoxLayout):
 
         # Eliminar seleccionados
         eliminados = 0
-        for i in range(len(rv.data) - 1, -1, -1):
-            if rv.data[i].get('seleccionado', False):
-                rv.data.pop(i)
+        for i in range(len(carrito_rv.data) - 1, -1, -1):
+            if carrito_rv.data[i].get('seleccionado', False):
+                carrito_rv.data.pop(i)
                 eliminados += 1
 
-            rv.refresh_from_data()
+            carrito_rv.refresh_from_data()
             self.recalcular_total()
 
             self.ids.notificacion_exito.text = f"{eliminados} artículo(s) eliminado(s)."
@@ -301,23 +527,23 @@ class VentasWindow(BoxLayout):
         que solo se modifique un producto válido.
         """
 
-        rv = self.ids.rvs  # Referencia al RecycleView del carrito
+        carrito_rv = self.ids.carrito_rv  # Referencia al RecycleView del carrito
 
         # 1. Verificar si el carrito está vacío
-        if not rv.data:
+        if not carrito_rv.data:
             self.ids.notificacion_exito.text = "No hay artículos en el carrito."
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
 
         # 2. Obtener el índice del producto seleccionado
-        indice = rv.articulo_seleccionado()
+        indice = carrito_rv.articulo_seleccionado()
         if indice < 0:
             self.ids.notificacion_exito.text = "Seleccione un artículo para modificar."
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
 
         # 3. Obtener el producto seleccionado
-        item = rv.data[indice]
+        item = carrito_rv.data[indice]
 
         #Abrir Popup
         popup=ModificarCantidadPopup(
@@ -339,7 +565,7 @@ class VentasWindow(BoxLayout):
         item['precio_total'] = item['cantidad_carrito'] * item['precio']
 
         # 7. Actualizar la vista y recalcular el total general
-        rv.refresh_from_data()
+        carrito_rv.refresh_from_data()
         self.recalcular_total()
 
         # 8. Notificar al usuario
@@ -353,8 +579,8 @@ class VentasWindow(BoxLayout):
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
         
-        rv = self.ids.rvs
-        indice = rv.articulo_seleccionado()
+        carrito_rv = self.ids.carrito_rv
+        indice = carrito_rv.articulo_seleccionado()
         if nueva <= 0:
             self.ids.notificacion_exito.text = "La cantidad debe ser mayor a cero."
             Clock.schedule_once(self._limpiar_notificacion, 3)
@@ -367,7 +593,7 @@ class VentasWindow(BoxLayout):
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
 
-        item = rv.data[indice]
+        item = carrito_rv.data[indice]
 
         if nueva > item['cantidad_inventario']:
             self.ids.notificacion_exito.text = "Cantidad supera el inventario."
@@ -378,7 +604,7 @@ class VentasWindow(BoxLayout):
         item['cantidad_carrito'] = nueva
         item['precio_total'] = nueva * item['precio']
 
-        rv.refresh_from_data()
+        carrito_rv.refresh_from_data()
         self.recalcular_total()
 
         self.ids.notificacion_exito.text = "Cantidad actualizada correctamente."
@@ -387,7 +613,7 @@ class VentasWindow(BoxLayout):
 
 
     def pagar(self):
-        if not self.ids.rvs.data:
+        if not self.ids.carrito_rv.data:
             self.ids.notificacion_exito.text = "No hay productos a pagar."
             Clock.schedule_once(self._limpiar_notificacion, 3)
             return
@@ -398,27 +624,41 @@ class VentasWindow(BoxLayout):
         )
         popup.open()
 
+
     def confirmar_pago(self):
+        productos_bd = obtener_productos()
+
+        for item in self.ids.carrito_rv.data:
+            codigo = item['codigo']
+            cantidad_vendida = item['cantidad_carrito']
+
+            for p in productos_bd:
+                if p[1] == codigo:
+                    nuevo_stock = p[4] - cantidad_vendida
+                    actualizar_stock(codigo, nuevo_stock)
+                    break
+
         self.ids.notificacion_exito.text = "Pago realizado con éxito ✅"
         Clock.schedule_once(self._limpiar_notificacion, 3)
 
-        # Limpiar carrito
-        self.ids.rvs.data = []
-        self.sub_total = 0.0
-        self.total = 0.0
-
+        # limpiar carrito
+        self.ids.carrito_rv.data = []
+        self.total = 0
         self.ids.sub_total.text = "$ 0.00"
         self.ids.total.text = "$ 0.00"
 
-    def nueva_compra(self):
-        print("nueva_compra")
+    def cancelar(self):
+    # Limpia el carrito
+        self.ids.carrito_rv.data = []
 
-    def admin(self):
-        print("Admin presionado")
+        # Reinicia totales
+        self.total = 0
+        self.ids.sub_total.text = "$ 0.00"
+        self.ids.total.text = "$ 0.00"
 
-    def signout(self):
-        print("Signout presionado")
-
+        # Mensaje opcional
+        self.ids.notificacion_exito.text = "Venta cancelada"
+        Clock.schedule_once(self._limpiar_notificacion, 3)
 
 # ------------------------------
 #         APP PRINCIPAL

@@ -3,7 +3,6 @@
 #Importamos función para usar colores hexadecimales
 
 #:import hex kivy.utils.get_color_from_hex
- 
 
 # ------------------------------
 # BOTÓN OSCURO PERSONALIZADO
@@ -56,6 +55,7 @@
         size_hint_x: .2
         color: (0, 0, 0, 1)
 
+#OPCION DE GUARDAR EN LA BASE DE DATOS 
 # -------------------------------------------------------------------
 # FILA SELECCIONABLE PARA POPUP DE BÚSQUEDA POR NOMBRE
 # -------------------------------------------------------------------
@@ -69,19 +69,19 @@
 
     # COLUMNAS DE LA FILA DEL POPUP
     Label:
-        id: _codigo
+        id:_codigo
         size_hint_x: .25
         color: (1, 1, 1, 1)
     Label:
-        id: _articulo
+        id:_articulo
         size_hint_x: .25
         color: (1, 1, 1, 1)
     Label:
-        id: _cantidad
+        id:_cantidad
         size_hint_x: .1
         color: (1, 1, 1, 1)
     Label:
-        id: _precio
+        id:_precio
         size_hint_x: .15
         color: (1, 1, 1, 1)
 
@@ -126,7 +126,7 @@
 
         # LISTA RECYCLEVIEW
         RV:
-            id: rvs
+            id: carrito_rv
             viewclass: 'SelectableBoxLayoutPopup'
 
         # BOTONES DEL POPUP
@@ -220,6 +220,145 @@
                 background_color: 0.2, 0.7, 0.2, 1
                 on_release: root.confirmar()
 
+
+# ------------------------------
+# POPUP AGREGAR PRODUCTO
+# ------------------------------
+<AgregarProductoPopup>:
+    title: "Agregar producto"
+    size_hint: 0.6, 0.7
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+
+        Label:
+            id: mensaje
+            text: ""
+            color: 1,0,0,1
+
+        TextInput:
+            id: codigo
+            hint_text: "Código"
+
+        TextInput:
+            id: nombre
+            hint_text: "Nombre"
+
+        TextInput:
+            id: precio
+            hint_text: "Precio"
+            input_filter: "float"
+
+        TextInput:
+            id: cantidad
+            hint_text: "Cantidad"
+            input_filter: "int"
+
+        BoxLayout:
+            size_hint_y: None
+            height: 50
+            spacing: 10
+
+            Button:
+                text: "Guardar"
+                on_release: root.guardar()
+
+            Button:
+                text: "Cancelar"
+                on_release: root.dismiss()
+#------------------
+#VER INVENTARIO
+#-----------------
+<VerInventarioPopup>:
+    title: "Inventario"
+    size_hint: 0.8, 0.8
+    auto_dismiss: True
+
+    BoxLayout:
+        orientation: "vertical"
+        spacing: 10
+        padding: 10
+
+        # ENCABEZADOS
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+
+            Label:
+                text: "Código"
+                size_hint_x: .2
+            Label:
+                text: "Nombre"
+                size_hint_x: .4
+            Label:
+                text: "Precio"
+                size_hint_x: .2
+            Label:
+                text: "Cantidad"
+                size_hint_x: .2
+        # LISTA
+        RecycleView:
+            id: rv_inventario
+            viewclass: 'FilaInventario'
+
+            SelectableRecycleBoxLayout:
+                default_size: None, dp(30)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: "vertical"
+                multiselect: False
+                touch_multiselect: False
+
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 10
+
+            Button:
+                text: "Editar"
+                on_release: root.editar_item()
+
+            Button:
+                text: "Eliminar"
+                on_release: root.eliminar_item()
+
+            Button:
+                text: "Cerrar"
+                on_release: root.dismiss()
+#TABLA INVENTRIO PERSONALIZADA 
+#------------------------------
+<FilaInventario>:
+    size_hint_y: None
+    height: "35dp"
+    orientation: "horizontal"
+    canvas.before:
+        Color:
+            rgba: (0.6, 0.9, 0.6, 1) if root.selected else ((0.85, 0.85, 0.85, 1) if root.index % 2 == 0 else (1,1,1,1))
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # COLUMNAS
+    Label:
+        text: root.codigo
+        size_hint_x: .2
+        color: 0, 0, 0, 1
+    Label:
+        text: root.nombre
+        size_hint_x: .4
+        color: 0, 0, 0, 1
+    Label:
+        text: root.precio
+        size_hint_x: .2
+        color: 0, 0, 0, 1
+    Label:
+        text: root.cantidad
+        size_hint_x: .2
+        color: 0, 0, 0, 1
 # -------------------------
 # VENTANA PRINCIPAL DE VENTAS
 # -------------------------
@@ -232,6 +371,53 @@
         Rectangle:
             size: self.size
             pos: self.pos
+    BoxLayout:
+        size_hint_y: None
+        height: "5dp"
+        spacing: 10
+        padding: 5
+
+    BotonOscuro:
+        text: "Agregar Inventario"
+        size_hint_y: None
+        height: "40dp"
+        background_color: 0,0,0,0
+        on_release: root.abrir_popup_agregar()
+
+        canvas.before:
+            Color:
+                rgba: 0.31, 0.31, 0.31, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [10]
+
+            Color:
+                rgba: 1, 1, 1, 1
+            Line:
+                width: 1
+                rounded_rectangle: (self.x, self.y, self.width, self.height, 10)
+
+    BotonOscuro:
+        text: "Ver Inventario"
+        size_hint_y: None
+        height: "40dp"
+        background_color: 0,0,0,0
+        on_release: root.abrir_popup_inventario()
+
+        canvas.before:
+            Color:
+                rgba: 0.31, 0.31, 0.31, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [10]
+
+            Color:
+                rgba: 1, 1, 1, 1
+            Line:
+                width: 1
+                rounded_rectangle: (self.x, self.y, self.width, self.height, 10)
 
     # -------------------------------------------------
     # ENCABEZADO SUPERIOR (Usuario, fecha, botones)
@@ -348,7 +534,7 @@
 
             # LISTA DEL CARRITO
             RV:
-                id: rvs
+                id: carrito_rv
                 viewclass: 'SelectableBoxLayout'
 
             # BOTONES PARA EDITAR EL CARRITO
@@ -430,5 +616,7 @@
                 BotonOscuro:
                     text: 'Cancelar'
                     on_release: root.cancelar()
+
+
 
 
