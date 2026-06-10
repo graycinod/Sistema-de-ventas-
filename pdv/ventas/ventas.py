@@ -14,10 +14,18 @@ from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.recycleview.layout import LayoutSelectionBehavior 
 from kivy.uix.popup import Popup 
 from kivy.clock import Clock
+from kivy.uix.label import Label
 from kivy.properties import NumericProperty
 from database import insertar_producto, obtener_productos, buscar_producto
 from database import obtener_productos, actualizar_stock
 from database import actualizar_producto, eliminar_producto
+from database import guardar_venta,guardar_detalle_venta
+from datetime import datetime
+from database import obtener_ventas,obtener_detalle_venta
+from database import obtener_ventas
+from database import obtener_detalle_venta
+from database import obtener_ventas_fecha,total_ventas
+from database import eliminar_venta
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 
@@ -130,6 +138,188 @@ class VerInventarioPopup(Popup):
             self.cargar_datos()
         else:
             print("No hay producto seleccionado")
+#popup mostrar ventas
+class HistorialVentasPopup(Popup):
+    venta_seleccionada = None
+    total_general = StringProperty("0")
+
+    def cargar_datos(self):
+        ventas = obtener_ventas()
+
+        data = []
+
+        for venta in ventas:
+            data.append({
+                "id_venta": str(venta[0]),
+                "fecha": venta[1],
+                "total": f"${venta[2]:.2f}"
+            })
+
+        self.ids.rv_ventas.data = data
+        self.total_general = f"{total_ventas():,.2f}"
+    
+    def buscar_fecha(self):
+        fecha = self.ids.txt_fecha.text
+
+        ventas = obtener_ventas_fecha(fecha)
+
+        data = []
+
+        for venta in ventas:
+            data.append({
+                "id_venta": str(venta[0]),
+                "fecha": venta[1],
+                "total": f"${venta[2]:.2f}"
+            })
+
+        self.ids.rv_ventas.data = data
+
+    def ver_detalle(self):
+
+        if not self.venta_seleccionada:
+            return
+
+        popup = DetalleVentaPopup(
+            venta_id=self.venta_seleccionada
+        )
+
+        popup.open()
+        popup.cargar_datos()
+
+#confirmacion antes de eliminar 
+
+    def confirmar_eliminar_venta(self):
+
+        if not self.venta_seleccionada:
+            return
+
+        contenido = BoxLayout(
+            orientation="vertical",
+            padding=10,
+            spacing=10
+        )
+
+        mensaje = Label(
+            text="¿Desea eliminar esta venta?"
+        )
+
+        botones = BoxLayout(
+            size_hint_y=None,
+            height="40dp",
+            spacing=10
+        )
+
+        btn_si = Button(text="Sí")
+        btn_no = Button(text="No")
+
+        botones.add_widget(btn_si)
+        botones.add_widget(btn_no)
+
+        contenido.add_widget(mensaje)
+        contenido.add_widget(botones)
+
+        popup = Popup(
+            title="Confirmar eliminación",
+            content=contenido,
+            size_hint=(0.5, 0.3),
+            auto_dismiss=False
+        )
+
+        btn_no.bind(
+            on_release=lambda x: popup.dismiss()
+        )
+
+        btn_si.bind(
+            on_release=lambda x: self.eliminar_venta_confirmada(popup)
+        )
+
+        popup.open()
+
+
+# metodo de eliminacion confirmada 
+    def eliminar_venta_confirmada(self, popup):
+
+        eliminar_venta(self.venta_seleccionada)
+
+        popup.dismiss()
+
+        self.cargar_datos()
+
+class DetalleVentaPopup(Popup):
+
+    def __init__(self, venta_id, **kwargs):
+        super().__init__(**kwargs)
+        self.venta_id = venta_id
+
+    def cargar_datos(self):
+
+        detalles = obtener_detalle_venta(self.venta_id)
+
+        data = []
+
+        for d in detalles:
+            data.append({
+                "codigo": str(d[0]),
+                "nombre": str(d[1]),
+                "cantidad": str(d[2]),
+                "precio": f"${d[3]:.2f}",
+                "subtotal": f"${d[4]:.2f}"
+            })
+        print(data) #<-- agrega esto
+
+        self.ids.rv_detalle.data = data
+
+class FilaHistorialVenta(RecycleDataViewBehavior, BoxLayout):
+    id_venta = StringProperty("")
+    fecha = StringProperty("")
+    total = StringProperty("")
+
+    index = NumericProperty(0)
+    selected = BooleanProperty(False)
+    selectable = BooleanProperty(True)
+
+    def refresh_view_attrs(self, rv, index, data):
+        self.index = index
+        self.id_venta = data["id_venta"]
+        self.fecha = data["fecha"]
+        self.total = data["total"]
+        return super().refresh_view_attrs(rv, index, data)
+
+    def on_touch_down(self, touch):
+        if super().on_touch_down(touch):
+            return True
+        if self.collide_point(*touch.pos) and self.selectable:
+            return self.parent.select_with_touch(self.index, touch)
+
+    def apply_selection(self, rv, index, is_selected):
+        self.selected = is_selected
+
+        if is_selected:
+            popup = App.get_running_app().root.historial_popup
+            popup.venta_seleccionada = int(rv.data[index]["id_venta"])
+
+    def eliminar_venta(self):
+        if not self.venta_seleccionada:
+            return
+
+        eliminar_venta_bd(self.venta_seleccionada)
+        self.cargar_datos()
+
+class FilaDetalleVenta(RecycleDataViewBehavior,BoxLayout):
+    codigo = StringProperty("")
+    nombre = StringProperty("")
+    cantidad = StringProperty("")
+    precio = StringProperty("")
+    subtotal = StringProperty("")
+
+    def refresh_view_attrs(self, rv, index, data):
+        self.codigo = data.get("codigo", "")
+        self.nombre = data.get("nombre", "")
+        self.cantidad = data.get("cantidad", "")
+        self.precio = data.get("precio", "")
+        self.subtotal = data.get("subtotal", "")
+
+        return super().refresh_view_attrs(rv, index, data)
 
 
 class FilaInventario(RecycleDataViewBehavior, BoxLayout):
@@ -626,9 +816,27 @@ class VentasWindow(BoxLayout):
 
 
     def confirmar_pago(self):
+        #fecha y hora de la venta 
+        fecha=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        #guardar en cabezado de la venta
+        venta_id=guardar_venta(fecha,self.total)
+
         productos_bd = obtener_productos()
 
         for item in self.ids.carrito_rv.data:
+
+            #Guardar detalle de venta 
+            guardar_detalle_venta(
+                venta_id,
+                item['codigo'],
+                item['nombre'],
+                item['cantidad_carrito'],
+                item['precio'],
+                item['precio_total']
+                )
+            #actualizar stock
+
             codigo = item['codigo']
             cantidad_vendida = item['cantidad_carrito']
 
@@ -656,11 +864,19 @@ class VentasWindow(BoxLayout):
         self.ids.sub_total.text = "$ 0.00"
         self.ids.total.text = "$ 0.00"
 
+# Metodo para abrir popup de historial de ventas 
+    def abrir_historial_ventas(self):
+        popup = HistorialVentasPopup()
+
+        self.historial_popup=popup
+
+        popup.cargar_datos()
+        popup.open()
         # Mensaje opcional
-        self.ids.notificacion_exito.text = "Venta cancelada"
+        self.ids.notificacion_exito.text = "Venta cancelada con exito"
         Clock.schedule_once(self._limpiar_notificacion, 3)
 
-# ------------------------------
+#-------------------------
 #         APP PRINCIPAL
 # ------------------------------
 class VentasApp(App):
