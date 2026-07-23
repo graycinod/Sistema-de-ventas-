@@ -270,3 +270,158 @@ def eliminar_venta(venta_id):
 
     conexion.commit()
     conexion.close()
+
+def obtener_venta_por_id(venta_id):
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT id, fecha, total
+        FROM ventas
+        WHERE id = ?
+    """, (venta_id,))
+
+    venta = cursor.fetchone()
+
+    conexion.close()
+    return venta
+
+def reiniciar_base_datos():
+
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    # Vaciar tablas
+    cursor.execute("DELETE FROM detalle_venta")
+    cursor.execute("DELETE FROM ventas")
+    cursor.execute("DELETE FROM productos")
+
+    # Reiniciar contadores
+    cursor.execute("""
+        DELETE FROM sqlite_sequence
+        WHERE name='detalle_venta'
+    """)
+
+    cursor.execute("""
+        DELETE FROM sqlite_sequence
+        WHERE name='ventas'
+    """)
+
+    cursor.execute("""
+        DELETE FROM sqlite_sequence
+        WHERE name='productos'
+    """)
+
+    conexion.commit()
+    conexion.close()
+
+#obtener stock bajo
+def obtener_stock_bajo(limite=5):
+
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM productos
+        WHERE cantidad <= ?
+        ORDER BY cantidad ASC
+    """, (limite,))
+
+    datos = cursor.fetchall()
+
+    conexion.close()
+
+    return datos
+
+#total venta diaria 
+
+def total_vendido_hoy():
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT SUM(total)
+        FROM ventas
+        WHERE DATE(fecha) = DATE('now')
+    """)
+
+    resultado = cursor.fetchone()[0]
+
+    conexion.close()
+
+    return resultado if resultado else 0
+
+#cantidad de ventas hoy
+def cantidad_ventas_hoy():
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM ventas
+        WHERE DATE(fecha) = DATE('now')
+    """)
+
+    total = cursor.fetchone()[0]
+
+    conexion.close()
+
+    return total
+
+#productos mas vendidos 
+def producto_mas_vendido():
+
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT
+            nombre_producto,
+            SUM(cantidad) as total_vendido
+        FROM detalle_venta
+        GROUP BY nombre_producto
+        ORDER BY total_vendido DESC
+        LIMIT 1
+    """)
+
+    resultado = cursor.fetchone()
+
+    conexion.close()
+
+    return resultado
+
+#control inventario
+def obtener_control_inventario():
+
+    conexion = sqlite3.connect("inventario.db")
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT
+            p.codigo,
+            p.nombre,
+
+            COALESCE(
+                (
+                    SELECT SUM(d.cantidad)
+                    FROM detalle_venta d
+                    JOIN ventas v
+                        ON d.venta_id = v.id
+                    WHERE d.codigo_producto = p.codigo
+                    AND DATE(v.fecha) = DATE('now')
+                ),
+                0
+            ) AS vendido_hoy,
+
+            p.cantidad AS stock_actual
+
+        FROM productos p
+        ORDER BY p.nombre
+    """)
+
+    datos = cursor.fetchall()
+
+    conexion.close()
+
+    return datos

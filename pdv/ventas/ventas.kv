@@ -4,12 +4,47 @@
 
 #:import hex kivy.utils.get_color_from_hex
 
+#Botones menú:
+
+<MenuButton@ButtonBehavior+BoxLayout>
+
+    texto: ""
+    icono: ""
+
+    orientation: "horizontal"
+    spacing: 12
+    padding: 15, 0, 15, 0
+    size_hint_y: None
+    height: "58dp"
+
+    canvas.before:
+        Color:
+            rgba: (0.12,0.18,0.35,1)
+
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [15]
+
+    Image:
+        source: root.icono
+        size_hint: None, None
+        size: "28dp","28dp"
+
+    Label:
+        text: root.texto
+        color: 1,1,1,1
+        bold: True
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
 # ------------------------------
 # BOTÓN OSCURO PERSONALIZADO
 # ------------------------------
 <BotonOscuro@Button>:
     background_normal: ''  # Quitamos imagen por defecto del botón
-    background_color: hex('#393939')  # Color gris oscuro para el botón
+    background_color: hex('#1E293B')  # Color gris oscuro para el botón
 
 # ------------------------------
 # ETIQUETA CON FONDO OSCURO
@@ -384,21 +419,21 @@
             TextInput:
                 id: txt_fecha
                 hint_text: "2026-06-08"
-                size_hint_x: .9
-                size_hint_y: .6
+                size_hint_x: 7
+                size_hint_y: .3
 
 
             Button:
                 text: "Buscar"
                 on_release: root.buscar_fecha()
-                size_hint_x: .9
-                size_hint_y: .6
+                size_hint_x: 3
+                size_hint_y: .3
 
             Button:
                 text: "Eliminar Venta"
                 on_release: root.confirmar_eliminar_venta()
-                size_hint_x: .9
-                size_hint_y: .6
+                size_hint_x: 3
+                size_hint_y: .3
                 # Encabezados
         BoxLayout:
             size_hint_y: None
@@ -406,7 +441,7 @@
 
             Label:
                 text: "ID"
-                size_hint_x: .5
+                size_hint_x: .3
 
             Label:
                 text: "Fecha"
@@ -433,18 +468,22 @@
             text: "Total vendido: $" + root.total_general
         #boton detalle venta
 
-        Button:
-            text: "Ver Detalle"
+        BoxLayout:
             size_hint_y: None
             height: "40dp"
-            on_release: root.ver_detalle()
+            spacing: 10
 
-        # Botón cerrar
-        Button:
-            text: "Cerrar"
-            size_hint_y: None
-            height: "40dp"
-            on_release: root.dismiss()
+            Button:
+                text: "Ver Detalle"
+                on_release: root.ver_detalle()
+
+            Button:
+                text: "Reimprimir Factura"
+                on_release: root.reimprimir_factura()
+
+            Button:
+                text: "Cerrar"
+                on_release: root.dismiss()
 
 # -------------------------
 # FILA HISTORIAL VENTAS
@@ -544,250 +583,296 @@
 # VENTANA PRINCIPAL DE VENTAS
 # -------------------------
 <VentasWindow>:
-    orientation: 'vertical'
+    orientation: 'horizontal'
 
     canvas.before:
         Color:
-            rgba: hex('#87CEEB')  # Fondo azul claro
+            rgba: hex('#E0F2FE')  # Fondo azul claro
         Rectangle:
             size: self.size
             pos: self.pos
+#MENÚ IZQUIERDO
+
     BoxLayout:
-        size_hint_y: None
-        height: "5dp"
-        spacing: 10
-        padding: 5
-
-    BotonOscuro:
-        text: "Agregar Inventario"
-        size_hint_y: None
-        height: "40dp"
-        background_color: 0,0,0,0
-        on_release: root.abrir_popup_agregar()
+        size_hint_x: .18
+        orientation: 'vertical'
+        padding: 10
+        spacing: 8
 
         canvas.before:
             Color:
-                rgba: 0.31, 0.31, 0.31, 1
-            RoundedRectangle:
+                rgba: hex('#111827')
+
+            Rectangle:
                 pos: self.pos
                 size: self.size
-                radius: [10]
 
-            Color:
-                rgba: 1, 1, 1, 1
-            Line:
-                width: 1
-                rounded_rectangle: (self.x, self.y, self.width, self.height, 10)
+        Label:
+            text: "SISTEMA\nDE VENTAS"
+            bold: True
+            font_size: "22sp"
+            color: 1,1,1,1
 
-    BotonOscuro:
-        text: "Ver Inventario"
-        size_hint_y: None
-        height: "40dp"
-        background_color: 0,0,0,0
-        on_release: root.abrir_popup_inventario()
-        canvas.before:
-            Color:
-                rgba: 0.31, 0.31, 0.31, 1
-            RoundedRectangle:
-                pos: self.pos
-                size: self.size
-                radius: [10]
+            halign: 'center'
+            valign: 'middle'
+            text_size: self.size
 
-            Color:
-                rgba: 1, 1, 1, 1
-            Line:
-                width: 1
-                rounded_rectangle: (self.x, self.y, self.width, self.height, 10)
-    BotonOscuro:
-        text: "Historial Ventas"
-        size_hint_y: None
-        height: "40dp"
-        background_color: 0,0,0,0
-        on_release: root.abrir_historial_ventas()
+            size_hint_y: None
+            height: "70dp"
 
-        canvas.before:
-            Color:
-                rgba: 0.31, 0.31, 0.31, 1
-            RoundedRectangle:
-                pos: self.pos
-                size: self.size
-                radius: [10]
+        MenuButton:
+            texto: "Agregar Inventario"
+            icono: "logos/agregar_inventario.png"
+            on_release: root.abrir_popup_agregar()
 
-            Color:
-                rgba: 1, 1, 1, 1
-            Line:
-                width: 1
-                rounded_rectangle: (self.x, self.y, self.width, self.height, 10)
+        MenuButton:
+            texto: "Ver Inventario"
+            icono: "logos/ver_inventario.png"
+            on_release: root.abrir_popup_inventario()
+
+        MenuButton:
+            texto: "Historial Ventas"
+            icono: "logos/histoial_ventas.png"
+            on_release: root.abrir_historial_ventas()
+
+        MenuButton:
+            texto: "Control Inventario"
+            icono: "logos/control_inventario.png"
+            on_release: root.abrir_control_inventario()
+
+        MenuButton:
+            texto: "Estadísticas"
+            icono: "logos/estadisticas.png"
+            on_release: root.abrir_estadisticas()
+
+        MenuButton:
+            texto: "Stock Bajo"
+            icono: "logos/stock_bajo.png"
+            on_release: root.abrir_stock_bajo()
+       
+        Widget:
+
+        MenuButton:
+            texto: "Reiniciar"
+            icono: "logos/reiniciar.png"
+            on_release: root.confirmar_reinicio()
+    
+    #CONTENEDOR DERECHO
+    BoxLayout:
+        orientation: 'vertical'
 
     # -------------------------------------------------
     # ENCABEZADO SUPERIOR (Usuario, fecha, botones)
     # -------------------------------------------------
-    BoxLayout:
-        size_hint_y: .1
-        spacing: .5
+        BoxLayout:
+            size_hint_y: None
+            height: "60dp"
+            spacing: 10
+            padding: [10,5]
 
-        Label:
-            id: bienvenido_label
-            size_hint_x: .3
-            text: 'Bienvenido: '
-            color: hex('#000000')
-
-        # FECHA Y HORA
-        GridLayout:
-            size_hint_x: .25
-            rows: 2
-            cols: 2
             Label:
-                text: 'Fecha:'
-                color: hex('#000000')
-            Label:
-                id: fecha
-                color: hex('#000000')
-            Label:
-                text: 'Hora:'
-                color: hex('#000000')
-            Label:
-                id: hora
-                color: hex('#000000')
+                id: bienvenido_label
+                size_hint_x: .3
+                text: 'Bienvenido: '
+                color: 0,0,0,1
+                bold: True
+                font_size: '18sp'
 
-        Label:
-            size_hint_x: .2
+            # FECHA Y HORA
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_x: .15
 
-        # BOTÓN ADMIN
-        BotonOscuro:
-            id: admin_boton
-            size_hint_x: .15
-            text: 'Admin'
-            on_release: root.admin()
+                Label:
+                    text: 'Fecha:'
+                    color: 0,0,0,1
+                    bold: True
+                    font_size: '18sp'
+                Label:
+                    id: fecha
+                    color: 0,0,0,1
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_x: .15
 
-        # BOTÓN SIGN OUT
-        BotonOscuro:
-            id: signout_boton
-            size_hint_x: .15
-            text: 'Signout'
-            on_release: root.signout()
+                Label:
+                    text: 'Hora:'
+                    color: 0,0,0,1
+                    bold: True
+                    font_size: '18sp'
+                Label:
+                    id: hora
+                    color: 0,0,0,1
+            Widget:
+            # BOTÓN ADMIN
+            BotonOscuro:
+                id: admin_boton
+                text: 'Admin'
+                size_hint_x: None
+                width: "110dp"
+                on_release: root.admin()
 
-    # -------------------------------------------------------
-    # CUERPO PRINCIPAL (Panel izquierdo + panel derecho)
-    # -------------------------------------------------------
-    BoxLayout:
-        size_hint_y: .87
-        spacing: .5
+            # BOTÓN SIGN OUT
+            BotonOscuro:
+                id: signout_boton
+                text: 'Salir'
+                size_hint_x: None
+                width: "110dp"
+               
+                on_release: root.signout()
 
-        canvas.before:
-            Color:
-                rgba: hex('#FFFFFF')
-            Rectangle:
-                size: self.size
-                pos: self.pos
+        # -------------------------------------------------------
+        # CUERPO PRINCIPAL (Panel izquierdo + panel derecho)
+        # -------------------------------------------------------
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: .1
+            spacing: .5
+
+            canvas.before:
+                Color:
+                    rgba: hex('#FFFFFF')
+                Rectangle:
+                    size: self.size
+                    pos: self.pos
 
 
         # -------------------------------------------
         # PANEL IZQUIERDO (Buscador + carrito)
         # -------------------------------------------
-        BoxLayout:
-            size_hint_x: .30
-            orientation: 'vertical'
-            spacing: .8
-
-            # BUSCADORES
-            GridLayout:
-                spacing: .5
-                size_hint_y: .2
-                rows: 2
-                cols: 2
-
-                LabelOscuro:
-                    text: 'Buscar por Código'
-                LabelOscuro:
-                    text: 'Buscar por Nombre'
-
-                TextInput:
-                    id: buscar_codigo
-                    multiline: False
-                    on_text_validate: root.agregar_producto_codigo(self.text)  # Enter = buscar
-
-                TextInput:
-                    id: buscar_nombre
-                    multiline: False
-                    on_text_validate: root.agregar_producto_nombre(self.text)
-
-            # ENCABEZADOS DE TABLA DE CARRITO
             BoxLayout:
-                size_hint_y: 0.10
-                spacing: .5
-                LabelOscuro:
-                    text: '#'
-                    size_hint_x: .1
-                LabelOscuro:
-                    text: 'Artículo'
-                    size_hint_x: .3
-                LabelOscuro:
-                    text: 'Cantidad'
-                    size_hint_x: .2
-                LabelOscuro:
-                    text: 'Precio x Artículo'
-                    size_hint_x: .2
-                LabelOscuro:
-                    text: 'Precio'
-                    size_hint_x: .2
+                size_hint_x: 7
+                orientation: 'vertical'
+                spacing: .8
 
-            # LISTA DEL CARRITO
-            RV:
-                id: carrito_rv
-                viewclass: 'SelectableBoxLayout'
+                # BUSCADORES
+                GridLayout:
+                    spacing: .5
+                    size_hint_y: .2
+                    rows: 2
+                    cols: 2
 
-            # BOTONES PARA EDITAR EL CARRITO
+                    LabelOscuro:
+                        text: 'Buscar por Código'
+                    LabelOscuro:
+                        text: 'Buscar por Nombre'
+
+                    TextInput:
+                        id: buscar_codigo
+                        hint_text: "Ingrese código"
+                        multiline: False
+                        padding: [15,6]
+                        on_text_validate: root.agregar_producto_codigo(self.text)  # Enter = buscar
+
+                    TextInput:
+                        id: buscar_nombre
+                        hint_text: "Ingrese nombre"
+                        multiline: False
+                        padding: [15,6]
+                        on_text_validate: root.agregar_producto_nombre(self.text)
+
+                # ENCABEZADOS DE TABLA DE CARRITO
+                BoxLayout:
+                    size_hint_y: 0.10
+                    spacing: .5
+                    LabelOscuro:
+                        text: '#'
+                        size_hint_x: .1
+                    LabelOscuro:
+                        text: 'Artículo'
+                        size_hint_x: .3
+                    LabelOscuro:
+                        text: 'Cantidad'
+                        size_hint_x: .2
+                    LabelOscuro:
+                        text: 'Precio x Artículo'
+                        size_hint_x: .2
+                    LabelOscuro:
+                        text: 'Precio'
+                        size_hint_x: .2
+
+                # LISTA DEL CARRITO
+                RV:
+                    size_hint_y: .8
+                    id: carrito_rv
+                    viewclass: 'SelectableBoxLayout'
+
+                # BOTONES PARA EDITAR EL CARRITO
+                BoxLayout:
+                    size_hint_y: .12
+                    spacing: .5
+                    BotonOscuro:
+                        text: 'Borrar Artículo'
+                        on_release: root.eliminar_producto()
+                    BotonOscuro:
+                        text: 'Cambiar Cantidad'
+                        on_release: root.modificar_producto()
+
+            # -------------------------------------------
+            # PANEL DERECHO (Totales + acciones)
+            # -------------------------------------------
+        
             BoxLayout:
-                size_hint_y: .23
-                spacing: .5
-                BotonOscuro:
-                    text: 'Borrar Artículo'
-                    on_release: root.eliminar_producto()
-                BotonOscuro:
-                    text: 'Cambiar Cantidad'
-                    on_release: root.modificar_producto()
+                size_hint_x: .8
+                orientation: 'vertical'
 
-        # -------------------------------------------
-        # PANEL DERECHO (Totales + acciones)
-        # -------------------------------------------
-        BoxLayout:
-            size_hint_x: .1195
-            orientation: 'vertical'
+                canvas.before:
+                    Color:
+                        rgba: 1,1,1,1
 
-            canvas.before:
-                Color:
-                    rgba: hex('#BCD3D2')  # Fondo verde claro
-                Rectangle:
-                    size: self.size
-                    pos: self.pos
+                    RoundedRectangle:
+                        size: self.size
+                        pos: self.pos
+                        radius: [15]
 
-            # -------------------------------
-            # SUBTOTAL Y TOTAL
-            # -------------------------------
-            GridLayout:
-                size_hint_y: .4
-                rows: 2
-                cols: 2
+                # -------------------------------
+                # SUBTOTAL Y TOTAL
+                # -------------------------------
+                GridLayout:
+                    size_hint_y: .25
+                    size_hint_x: 2
+                    rows: 2
+                    cols: 2
 
-                Label:
-                    text: 'Sub_Total'
-                    color: 1, 1, 1, 1
+                    Label:
+                        text: 'Sub_Total'
+                        color: 0, 0, 0, 1
 
-                Label:
-                    id: sub_total
-                    text: '0.00'
-                    color: 1, 1, 1, 1
+                    Label:
+                        id: sub_total
+                        text: '0.00'
+                        color: 0, 0, 0, 1
 
-                Label:
-                    text: 'Total'
-                    color: 1, 1, 1, 1
+                    Label:
+                        text: 'Total'
+                        color: 0, 0, 0, 1
 
-                Label:
-                    id: total
-                    text: '0.00'
-                    color: 1, 1, 1, 1
+                    Label:
+                        id: total
+                        text: '0.00'
+                        color: 0, 0, 0, 1
+                # -------------------------------
+                # BOTONES
+                # -------------------------------
+                BoxLayout:
+                    size_hint_y: .12
+                    spacing: .1
 
+                    BotonOscuro:
+                        text: 'Pagar'
+                        background_color: 0.1, 0.7, 0.3, 1
+                        size_hint_x: None
+                        size_hint_y: .3
+                        width: "120dp"
+                        on_release: root.pagar()
+
+                    BotonOscuro:
+                        text: 'Cancelar'
+                        background_color: 0.9, 0.2, 0.2, 1
+                        size_hint_x: None
+                        width: "120dp"
+                        size_hint_y: .3
+                        on_release: root.cancelar()
 
             # -------------------------------
             # NOTIFICACIÓN DE ÉXITO
@@ -802,21 +887,141 @@
                 valign: "middle"
                 text_size: self.width, None
 
-            # -------------------------------
-            # BOTONES
-            # -------------------------------
-            BoxLayout:
-                size_hint_y: .3
-                spacing: .5
 
-                BotonOscuro:
-                    text: 'Pagar'
-                    on_release: root.pagar()
+<StockBajoPopup>:
+    title: "Productos con Stock Bajo"
+    size_hint: 0.8, 0.7
 
-                BotonOscuro:
-                    text: 'Cancelar'
-                    on_release: root.cancelar()
+    BoxLayout:
+        orientation: "vertical"
 
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
 
+            Label:
+                text: "Código"
 
+            Label:
+                text: "Producto"
 
+            Label:
+                text: "Stock"
+
+        RecycleView:
+            id: rv_stock
+            viewclass: "FilaStockBajo"
+
+            RecycleBoxLayout:
+                default_size: None, dp(35)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: "vertical"
+
+        Button:
+            text: "Cerrar"
+            size_hint_y: None
+            height: "40dp"
+            on_release: root.dismiss()
+
+<FilaStockBajo>:
+    size_hint_y: None
+    height: "35dp"
+
+    Label:
+        text: root.codigo
+
+    Label:
+        text: root.nombre
+
+    Label:
+        text: root.cantidad
+
+#estadisticas popup
+<EstadisticasPopup>:
+    title: "Estadísticas"
+    size_hint: 0.6, 0.4
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 20
+        spacing: 15
+
+        Label:
+            id: lbl_total_hoy
+            text: "Total vendido hoy: $0"
+            font_size: "20sp"
+
+        Label:
+            id: lbl_ventas_hoy
+            font_size: "20sp"
+
+        Label:
+            id: lbl_producto
+            font_size: "20sp"
+
+        Button:
+            text: "Cerrar"
+            size_hint_y: None
+            height: "40dp"
+            on_release: root.dismiss()
+
+#fila control inventario
+
+<FilaControlInventario>:
+    size_hint_y: None
+    height: "35dp"
+
+    Label:
+        text: root.codigo
+
+    Label:
+        text: root.nombre
+
+    Label:
+        text: root.vendido
+
+    Label:
+        text: root.stock
+
+#control invetario
+<ControlInventarioPopup>:
+    title: "Control Diario de Inventario"
+    size_hint: 0.9, 0.8
+
+    BoxLayout:
+        orientation: "vertical"
+
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+
+            Label:
+                text: "Código"
+
+            Label:
+                text: "Producto"
+
+            Label:
+                text: "Vendido Hoy"
+
+            Label:
+                text: "Stock Actual"
+
+        RecycleView:
+            id: rv_control
+            viewclass: "FilaControlInventario"
+
+            RecycleBoxLayout:
+                default_size: None, dp(35)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: "vertical"
+
+        Button:
+            text: "Cerrar"
+            size_hint_y: None
+            height: "40dp"
+            on_release: root.dismiss()

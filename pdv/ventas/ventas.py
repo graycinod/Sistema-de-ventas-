@@ -6,7 +6,7 @@
 from kivy.app import App  
 from kivy.uix.boxlayout import BoxLayout 
 from kivy.uix.recycleview import RecycleView 
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty,NumericProperty
 from kivy.uix.recycleview.views import RecycleDataViewBehavior 
 from kivy.properties import BooleanProperty 
 from kivy.uix.recycleboxlayout import RecycleBoxLayout 
@@ -24,11 +24,18 @@ from datetime import datetime
 from database import obtener_ventas,obtener_detalle_venta
 from database import obtener_ventas
 from database import obtener_detalle_venta
-from database import obtener_ventas_fecha,total_ventas
+from database import obtener_ventas_fecha,total_ventas,total_vendido_hoy
 from database import eliminar_venta
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
-
+from kivy.uix.dropdown import DropDown
+from factura import generar_factura_pdf
+from database import obtener_venta_por_id
+from database import reiniciar_base_datos
+from database import obtener_stock_bajo
+from database import cantidad_ventas_hoy
+from database import producto_mas_vendido
+from database import obtener_control_inventario
 # ------------------------------
 #         INVENTARIO
 # ------------------------------
@@ -244,6 +251,41 @@ class HistorialVentasPopup(Popup):
         popup.dismiss()
 
         self.cargar_datos()
+#reimprimir factura de venta en pdf 
+
+    def reimprimir_factura(self):
+
+        if not self.venta_seleccionada:
+            return
+
+        venta = obtener_venta_por_id(
+            self.venta_seleccionada
+        )
+
+        detalles = obtener_detalle_venta(
+            self.venta_seleccionada
+        )
+
+        productos = []
+
+        for d in detalles:
+
+            productos.append({
+                "codigo": d[0],
+                "nombre": d[1],
+                "cantidad_carrito": d[2],
+                "precio": d[3],
+                "precio_total": d[4]
+            })
+
+        generar_factura_pdf(
+            venta[0],  # id venta
+            venta[1],  # fecha
+            productos,
+            venta[2]   # total
+        )
+
+        print("Factura reimpresa correctamente")
 
 class DetalleVentaPopup(Popup):
 
@@ -268,6 +310,108 @@ class DetalleVentaPopup(Popup):
         print(data) #<-- agrega esto
 
         self.ids.rv_detalle.data = data
+
+#detalle stock bajo de productos 
+class StockBajoPopup(Popup):
+    codigo = StringProperty("")
+    nombre = StringProperty("")
+    cantidad = StringProperty("")
+
+    def cargar_datos(self):
+
+        productos = obtener_stock_bajo()
+
+        data = []
+
+        for p in productos:
+            data.append({
+                "codigo": str(p[1]),
+                "nombre": p[2],
+                "cantidad": str(p[4])
+            })
+
+        self.ids.rv_stock.data = data
+#popup de estadisticas 
+
+class EstadisticasPopup(Popup):
+
+    def cargar_datos(self):
+
+        total_hoy = total_vendido_hoy()
+        ventas_hoy = cantidad_ventas_hoy()
+        producto = producto_mas_vendido()
+
+        self.ids.lbl_total_hoy.text = (
+            f"Total vendido hoy: ${total_hoy:,.2f}"
+        )
+        self.ids.lbl_ventas_hoy.text = (
+            f"ventas realizadas hoy: {ventas_hoy}"
+        )
+        if producto:
+            self.ids.lbl_producto.text =(
+                f"Producto más vendido: {producto[0]} ({producto[1]}unidades)")
+        else:
+            self.ids.lbl_producto.text =(
+                "Producto más vendido: Sin datos"
+                )
+#popup control inventario
+class ControlInventarioPopup(Popup):
+
+    def cargar_datos(self):
+
+        productos = obtener_control_inventario()
+
+        data = []
+
+        for p in productos:
+
+            data.append({
+                "codigo": str(p[0]),
+                "nombre": p[1],
+                "vendido": str(p[2]),
+                "stock": str(p[3])
+            })
+
+        self.ids.rv_control.data = data
+
+#control inventario
+class FilaControlInventario(
+    RecycleDataViewBehavior,
+    BoxLayout
+):
+
+    codigo = StringProperty("")
+    nombre = StringProperty("")
+    vendido = StringProperty("")
+    stock = StringProperty("")
+
+    def refresh_view_attrs(self, rv, index, data):
+
+        self.codigo = data["codigo"]
+        self.nombre = data["nombre"]
+        self.vendido = data["vendido"]
+        self.stock = data["stock"]
+
+        return super().refresh_view_attrs(
+            rv,
+            index,
+            data
+        )
+#stock bajo
+
+class FilaStockBajo(RecycleDataViewBehavior, BoxLayout):
+
+    codigo = StringProperty("")
+    nombre = StringProperty("")
+    cantidad = StringProperty("")
+
+    def refresh_view_attrs(self, rv, index, data):
+
+        self.codigo = data.get("codigo", "")
+        self.nombre = data.get("nombre", "")
+        self.cantidad = data.get("cantidad", "")
+
+        return super().refresh_view_attrs(rv, index, data)
 
 class FilaHistorialVenta(RecycleDataViewBehavior, BoxLayout):
     id_venta = StringProperty("")
@@ -355,6 +499,7 @@ class FilaInventario(RecycleDataViewBehavior, BoxLayout):
         if is_selected:
             app = App.get_running_app()
             app.root.inventario_seleccionado = rv.data[index]
+
 
 class SelectableBoxLayoutPopup(RecycleDataViewBehavior, BoxLayout):
     index = None
@@ -502,6 +647,10 @@ class VentasWindow(BoxLayout):
         self.total=0.0
         self.inventario_seleccionado = None
 
+        Clock.schedule_once(
+        self.verificar_stock_bajo,
+        1
+        )
 #Agregar inventario SQLite
 
     def cargar_inventario(self):
@@ -761,6 +910,7 @@ class VentasWindow(BoxLayout):
         # 8. Notificar al usuario
         self.ids.notificacion_exito.text = "Producto modificado correctamente."
         Clock.schedule_once(self._limpiar_notificacion, 3)
+   
     def _confirmar_cantidad(self, texto):
         try:
             nueva = int(texto)
@@ -848,7 +998,12 @@ class VentasWindow(BoxLayout):
 
         self.ids.notificacion_exito.text = "Pago realizado con éxito ✅"
         Clock.schedule_once(self._limpiar_notificacion, 3)
-
+        generar_factura_pdf(
+            venta_id,
+            fecha,
+            self.ids.carrito_rv.data,
+            self.total
+        )
         # limpiar carrito
         self.ids.carrito_rv.data = []
         self.total = 0
@@ -876,6 +1031,168 @@ class VentasWindow(BoxLayout):
         self.ids.notificacion_exito.text = "Venta cancelada con exito"
         Clock.schedule_once(self._limpiar_notificacion, 3)
 
+
+    #reiniciar sistema:
+    def reiniciar_sistema(self):
+
+        reiniciar_base_datos()
+
+        self.ids.notificacion_exito.text = (
+            "Sistema reiniciado correctamente"
+        )
+
+        Clock.schedule_once(
+            self._limpiar_notificacion,
+            3
+        )
+
+    #confirmar reinicio
+    def confirmar_reinicio(self):
+
+        contenido = BoxLayout(
+            orientation="vertical",
+            spacing=10,
+            padding=10
+        )
+
+        mensaje = Label(
+            text="¿Desea eliminar TODA la información?"
+        )
+
+        botones = BoxLayout(
+            size_hint_y=None,
+            height="40dp"
+        )
+
+        btn_si = Button(text="Sí")
+        btn_no = Button(text="No")
+
+        botones.add_widget(btn_si)
+        botones.add_widget(btn_no)
+
+        contenido.add_widget(mensaje)
+        contenido.add_widget(botones)
+
+        popup = Popup(
+            title="Confirmar reinicio",
+            content=contenido,
+            size_hint=(0.6, 0.4),
+            auto_dismiss=False
+        )
+
+        btn_no.bind(
+            on_release=lambda x: popup.dismiss()
+        )
+
+        btn_si.bind(
+            on_release=lambda x: self._reiniciar_confirmado(
+                popup
+            )
+        )
+
+        popup.open()
+
+    #sistema reiniciado correctamente 
+
+    def _reiniciar_confirmado(self, popup):
+
+        reiniciar_base_datos()
+
+        popup.dismiss()
+
+        self.ids.notificacion_exito.text = (
+            "Sistema reiniciado correctamente"
+        )
+
+        Clock.schedule_once(
+            self._limpiar_notificacion,
+            3
+        )   
+    #metodo stock bajo de productos 
+
+    def ver_stock_bajo(self):
+
+        productos = obtener_stock_bajo()
+
+        print(productos)
+
+    def abrir_stock_bajo(self):
+
+        popup = StockBajoPopup()
+
+        popup.open()
+
+        popup.cargar_datos()
+
+    def verificar_stock_bajo(self, dt):
+
+        productos = obtener_stock_bajo()
+
+        if len(productos) > 0:
+
+            popup = Popup(
+                title="Stock Bajo",
+                content=Label(
+                    text=f"Existen {len(productos)} productos con stock bajo."
+                ),
+                size_hint=(0.5, 0.3)
+            )
+
+            popup.open()
+
+#metodo para abrir el popup de estadisticas
+
+    def abrir_estadisticas(self):
+
+        popup = EstadisticasPopup()
+
+        popup.open()
+
+        popup.cargar_datos()
+
+#metodo de control inventario
+    def abrir_control_inventario(self):
+
+        popup = ControlInventarioPopup()
+
+        popup.open()
+
+        popup.cargar_datos()
+#menu de opciones 
+    def abrir_menu(self, boton):
+
+        dropdown = DropDown()
+        dropdown.auto_width = False
+        dropdown.width = 220
+        
+        opciones = [
+            ("Agregar Inventario", self.abrir_popup_agregar),
+            ("Ver Inventario", self.abrir_popup_inventario),
+            ("Historial Ventas", self.abrir_historial_ventas),
+            ("Control Inventario", self.abrir_control_inventario),
+            ("Estadísticas", self.abrir_estadisticas),
+            ("Stock Bajo", self.abrir_stock_bajo),
+            ("Reiniciar Sistema", self.confirmar_reinicio)
+        ]
+
+        for texto, accion in opciones:
+
+            btn = Button(
+                text=texto,
+                size_hint_y=None,
+                height=50,
+                background_normal='',
+                background_color=(0.22,0.22,0.22,1),
+                color=(1,1,1,1),
+                bold=True
+            )
+
+            btn.bind(on_release=lambda btn, a=accion:
+                     (dropdown.dismiss(), a()))
+
+            dropdown.add_widget(btn)
+
+        dropdown.open(boton)
 #-------------------------
 #         APP PRINCIPAL
 # ------------------------------
