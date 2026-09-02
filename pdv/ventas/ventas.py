@@ -641,16 +641,46 @@ class ConfirmarPagoPopup(Popup):
 # ------------------------------
 class VentasWindow(BoxLayout):
 
-    def __init__(self, **kwargs):
+    def __init__(self,nombre_usuario="",rol_usuario="", **kwargs):
         super().__init__(**kwargs)
         self.sub_total = 0.0
         self.total=0.0
         self.inventario_seleccionado = None
 
+        self.nombre_usuario=nombre_usuario
+        self.rol_usuario=rol_usuario
+
+        self.ids.bienvenido_label.text=( 
+            f"Bienvenido@: {self.nombre_usuario}| "
+            f"{self.rol_usuario}"
+        )
+
+
         Clock.schedule_once(
         self.verificar_stock_bajo,
-        1
+        0
         )
+        # Actualizar fecha y hora cada segundo
+        Clock.schedule_interval(
+            self.actualizar_fecha_hora,
+            1
+        )
+    def iniciar_ventana(self, dt):
+
+        # Actualizar fecha y hora inmediatamente
+        self.actualizar_fecha_hora(dt)
+
+        # Revisar stock bajo después de cargar la ventana
+        Clock.schedule_once(
+            self.verificar_stock_bajo,
+            1
+        )
+    def actualizar_fecha_hora(self, dt):
+        ahora = datetime.now()
+        self.ids.fecha.text = ahora.strftime("%d/%m/%Y")
+        self.ids.hora.text = ahora.strftime("%I:%M:%S %p")
+
+
 #Agregar inventario SQLite
 
     def cargar_inventario(self):
@@ -1193,6 +1223,24 @@ class VentasWindow(BoxLayout):
             dropdown.add_widget(btn)
 
         dropdown.open(boton)
+
+
+    def admin(self):
+        contenido = Label(
+            text=(
+                "Nombre: Administrador\n\n"
+                "Usuario: admin\n\n"
+                "Rol: Administrador"
+            )
+        )
+
+        popup = Popup(
+            title="Perfil de Usuario",
+            content=contenido,
+            size_hint=(0.45,0.45)
+        )
+
+        popup.open()
 #-------------------------
 #         APP PRINCIPAL
 # ------------------------------

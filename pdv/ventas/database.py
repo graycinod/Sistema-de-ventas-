@@ -42,10 +42,42 @@ def crear_tabla():
     )
     """)
 
-    conexion.commit()
-    conexion.close()
 
+#table usuarios
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        usuario TEXT UNIQUE NOT NULL,
+        contraseña TEXT NOT NULL,
+        rol TEXT NOT NULL)
+    """) 
+
+    
+
+# Crear administrador por defecto
+    cursor.execute("""
+    SELECT COUNT(*) FROM usuarios
+    """)
+
+    cantidad = cursor.fetchone()[0]
+
+    if cantidad == 0:
+        cursor.execute("""
+        INSERT INTO usuarios(nombre, usuario, contraseña, rol)
+        VALUES (?, ?, ?, ?)
+        """, (
+            "Yulieth Vera",
+            "admin",
+            "1234",
+            "Administrador"
+        )) 
+
+
+    conexion.commit()
+    conexion.close() 
 crear_tabla()
+
 
 
 def insertar_producto(codigo, nombre, precio, cantidad):
@@ -425,3 +457,36 @@ def obtener_control_inventario():
     conexion.close()
 
     return datos
+#validación dde usuario
+
+def validar_usuario(usuario, contraseña):
+
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+    SELECT nombre, usuario, rol
+    FROM usuarios
+    WHERE usuario = ?
+    AND contraseña = ?
+    """, (usuario, contraseña))
+
+    datos = cursor.fetchone()
+
+    conexion.close()
+
+    return datos
+#Creación de usuarios en el sistema
+
+def crear_usuario(nombre, usuario, contraseña, rol):
+
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+    INSERT INTO usuarios(nombre,usuario,contraseña,rol)
+    VALUES(?,?,?,?)
+    """,(nombre,usuario,contraseña,rol))
+
+    conexion.commit()
+    conexion.close()

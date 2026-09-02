@@ -1,0 +1,89 @@
+<LoginWindow>:
+    orientation: "horizontal"
+
+    canvas.before:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+            source: "logos/fondo_login.jpg"
+#espacio que ocupa el fondo
+
+    BoxLayout:
+        size_hint_x: .01
+
+# Contenedor que centra el login
+    AnchorLayout:
+        size_hint_x: .45
+        anchor_x: "center"
+        anchor_y: "center"
+
+        BoxLayout:
+            orientation: "vertical"
+            size_hint_x: None
+            size_hint_y: None
+            width: "470dp"
+            height: "700dp"
+            padding: 40
+            spacing: 18
+
+            canvas.before:
+                Color:
+                    rgba: .12,.14,.20,.96
+
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [25]
+
+            Widget:
+                size_hint_y: .2
+
+            Image:
+                source: "logos/logo.png"
+                size_hint_x: None
+                size_hint_y: None
+                width: "300dp"
+                height: "300dp"
+                pos_hint: {"center_x": .5}
+                allow_stretch: True
+                keep_ratio: True
+            Label:
+                text: "INICIAR SESIÓN"
+                font_size: "26sp"
+                bold: True
+                color: 1,1,1,1
+                height: "45dp"
+
+            TextInput:
+                id: txt_usuario
+                hint_text: "Usuario"
+                multiline: False
+                height: "45dp"
+                size_hint_y: None
+
+            TextInput:
+                id: txt_password
+                hint_text: "Contraseña"
+                multiline: False
+                password: True
+                height: "45dp"
+                size_hint_y: None
+
+            Button:
+                text: "Iniciar Sesión"
+                size_hint_y: None
+                height: "50dp"
+                background_normal: ""
+                background_color: .18,.38,.86,1
+
+                on_release:
+                    root.iniciar_sesion()
+
+            Widget:
+
+            Label:
+                text:"Sistema de Gestión de Ventas Desarrollado por \nYulieth Vera Versión 1.0"
+                font_size: "12sp"
+                halign: "center"
+                bold: True
+                color: 1,1,1,1
