@@ -36,6 +36,13 @@ from database import obtener_stock_bajo
 from database import cantidad_ventas_hoy
 from database import producto_mas_vendido
 from database import obtener_control_inventario
+from database import obtener_usuarios
+from database import obtener_usuario_por_nombre_usuario
+from database import obtener_permisos_usuario
+from database import guardar_permisos_usuario
+
+#nuevos cambios 
+
 # ------------------------------
 #         INVENTARIO
 # ------------------------------
@@ -427,21 +434,44 @@ class FilaHistorialVenta(RecycleDataViewBehavior, BoxLayout):
         self.id_venta = data["id_venta"]
         self.fecha = data["fecha"]
         self.total = data["total"]
+        
         return super().refresh_view_attrs(rv, index, data)
 
     def on_touch_down(self, touch):
         if super().on_touch_down(touch):
             return True
+
         if self.collide_point(*touch.pos) and self.selectable:
             return self.parent.select_with_touch(self.index, touch)
+        return False
 
     def apply_selection(self, rv, index, is_selected):
         self.selected = is_selected
 
         if is_selected:
-            popup = App.get_running_app().root.historial_popup
-            popup.venta_seleccionada = int(rv.data[index]["id_venta"])
+            app = App.get_running_app()
 
+            # RootLayout contiene la VentasWindow
+            ventas_window = None
+
+            # Buscar VentasWindow entre los hijos de RootLayout
+            for hijo in app.root.children:
+                if isinstance(hijo, VentasWindow):
+                    ventas_window = hijo
+                    break
+
+            if ventas_window is not None:
+
+                popup = getattr(
+                    ventas_window,
+                    "historial_popup",
+                    None
+                )
+
+                if popup is not None:
+                    popup.venta_seleccionada = int(
+                        rv.data[index]["id_venta"]
+                    )
     def eliminar_venta(self):
         if not self.venta_seleccionada:
             return
@@ -635,20 +665,209 @@ class ConfirmarPagoPopup(Popup):
     def confirmar(self):
         self.confirmar_callback()
         self.dismiss()
+
+#clase para permisos de usuario 
+
+class PermisosUsuariosPopup(Popup):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        Clock.schedule_once(self.cargar_usuarios, 0)
+
+    def cargar_usuarios(self, *args):
+        usuarios = obtener_usuarios()
+        print("USUARIOS ENCONTRADOS:", usuarios)
+
+        self.usuarios = usuarios
+
+        self.ids.usuario_spinner.values = [
+            usuario[2] for usuario in usuarios
+        ]
+        print("VALORES DEL SPINNER:", self.ids.usuario_spinner.values)
+
+    def seleccionar_usuario(self, usuario):
+        usuario_data = obtener_usuario_por_nombre_usuario(usuario)
+
+        if not usuario_data:
+            return
+
+        usuario_id = usuario_data[0]
+        rol = usuario_data[3]
+
+        self.usuario_id_seleccionado = usuario_id
+
+        self.ids.rol_usuario.text = rol
+
+        self.cargar_permisos(usuario_id)
+
+    def cargar_permisos(self, usuario_id):
+
+        permisos = obtener_permisos_usuario(usuario_id)
+
+        permisos_dict = {
+            permiso: permitido
+            for permiso, permitido in permisos
+        }
+
+        self.ids.permiso_agregar_inventario.active = (
+            permisos_dict.get("agregar_inventario", 0) == 1
+        )
+
+        self.ids.permiso_ver_inventario.active = (
+            permisos_dict.get("ver_inventario", 0) == 1
+        )
+
+        self.ids.permiso_editar_inventario.active = (
+            permisos_dict.get("editar_inventario", 0) == 1
+        )
+
+        self.ids.permiso_eliminar_inventario.active = (
+            permisos_dict.get("eliminar_inventario", 0) == 1
+        )
+
+        self.ids.permiso_registrar_venta.active = (
+            permisos_dict.get("registrar_venta", 0) == 1
+        )
+
+        self.ids.permiso_historial.active = (
+            permisos_dict.get("ver_historial", 0) == 1
+        )
+
+        self.ids.permiso_eliminar_venta.active = (
+            permisos_dict.get("eliminar_venta", 0) == 1
+        )
+
+        self.ids.permiso_reimprimir_factura.active = (
+            permisos_dict.get("reimprimir_factura", 0) == 1
+        )
+
+        self.ids.permiso_control_inventario.active = (
+            permisos_dict.get("control_inventario", 0) == 1
+        )
+
+        self.ids.permiso_estadisticas.active = (
+            permisos_dict.get("estadisticas", 0) == 1
+        )
+
+        self.ids.permiso_stock_bajo.active = (
+            permisos_dict.get("stock_bajo", 0) == 1
+        )
+
+        self.ids.permiso_usuarios.active = (
+            permisos_dict.get("usuarios", 0) == 1
+        )
+
+        self.ids.permiso_reiniciar.active = (
+            permisos_dict.get("reiniciar", 0) == 1
+        )
+
+    def guardar_permisos(self):
+
+        if not hasattr(self, "usuario_id_seleccionado"):
+            print("Primero selecciona un usuario")
+            return
+
+        permisos = []
+
+        if self.ids.permiso_agregar_inventario.active:
+            permisos.append("agregar_inventario")
+
+        if self.ids.permiso_ver_inventario.active:
+            permisos.append("ver_inventario")
+
+        if self.ids.permiso_editar_inventario.active:
+            permisos.append("editar_inventario")
+
+        if self.ids.permiso_eliminar_inventario.active:
+            permisos.append("eliminar_inventario")
+
+        if self.ids.permiso_registrar_venta.active:
+            permisos.append("registrar_venta")
+
+        if self.ids.permiso_historial.active:
+            permisos.append("ver_historial")
+
+        if self.ids.permiso_eliminar_venta.active:
+            permisos.append("eliminar_venta")
+
+        if self.ids.permiso_reimprimir_factura.active:
+            permisos.append("reimprimir_factura")
+
+        if self.ids.permiso_control_inventario.active:
+            permisos.append("control_inventario")
+
+        if self.ids.permiso_estadisticas.active:
+            permisos.append("estadisticas")
+
+        if self.ids.permiso_stock_bajo.active:
+            permisos.append("stock_bajo")
+
+        if self.ids.permiso_usuarios.active:
+            permisos.append("usuarios")
+
+        if self.ids.permiso_reiniciar.active:
+            permisos.append("reiniciar")
+
+            # PRUEBA
+        print("================================")
+        print("USUARIO ID:", self.usuario_id_seleccionado)
+        print("PERMISOS SELECCIONADOS:", permisos)
+        print("================================")
+
+        guardar_permisos_usuario(
+            self.usuario_id_seleccionado,
+            permisos
+        )
+
+        print("Permisos guardados correctamente")
         
 # ------------------------------
 #      VENTANA PRINCIPAL
 # ------------------------------
 class VentasWindow(BoxLayout):
 
-    def __init__(self,nombre_usuario="",rol_usuario="", **kwargs):
+    def __init__(self,nombre_usuario="",rol_usuario="",usuario_login="", **kwargs):
         super().__init__(**kwargs)
         self.sub_total = 0.0
         self.total=0.0
+        self.permisos_bd=None
         self.inventario_seleccionado = None
 
         self.nombre_usuario=nombre_usuario
         self.rol_usuario=rol_usuario
+        self.usuario_login=usuario_login
+
+        # Verificar permisos según el rol
+        self.es_administrador = self.rol_usuario == "Administrador"
+        print("================================")
+        print("NOMBRE RECIBIDO:", self.nombre_usuario)
+        print("USUARIO LOGIN:", self.usuario_login)
+        print("ROL RECIBIDO:", self.rol_usuario)
+        print("================================")
+        # Cargar permisos del usuario
+        usuario = obtener_usuario_por_nombre_usuario(self.usuario_login)
+
+        if usuario:
+            usuario_id = usuario[0]
+
+
+            #obtener los permisos desde la base de datos
+            permisos_bd = obtener_permisos_usuario(usuario_id)
+
+            print("USUARIO:", self.nombre_usuario)
+            print("PERMISOS CARGADOS:", self.permisos_bd)
+            
+            #Guardamos los permisos originales
+            self.permisos = {
+                permiso: permitido == 1
+                for permiso, permitido in permisos_bd
+            }
+            print("DICCIONARIO DE PERMISOS:", self.permisos)
+        else:
+            print("No se encontraron permisos para:", self.usuario_login)
+            self.permisos_bd=[]
+            self.permisos = {}
 
         self.ids.bienvenido_label.text=( 
             f"Bienvenido@: {self.nombre_usuario}| "
@@ -1195,15 +1414,44 @@ class VentasWindow(BoxLayout):
         dropdown.auto_width = False
         dropdown.width = 220
         
-        opciones = [
-            ("Agregar Inventario", self.abrir_popup_agregar),
-            ("Ver Inventario", self.abrir_popup_inventario),
-            ("Historial Ventas", self.abrir_historial_ventas),
-            ("Control Inventario", self.abrir_control_inventario),
-            ("Estadísticas", self.abrir_estadisticas),
-            ("Stock Bajo", self.abrir_stock_bajo),
-            ("Reiniciar Sistema", self.confirmar_reinicio)
-        ]
+        opciones = []
+
+        if self.permisos.get("agregar_inventario", False):
+            opciones.append(
+                ("Agregar Inventario", self.abrir_popup_agregar)
+            )
+
+        if self.permisos.get("ver_inventario", False):
+            opciones.append(
+                ("Ver Inventario", self.abrir_popup_inventario)
+            )
+
+        if self.permisos.get("ver_historial", False):
+            opciones.append(
+                ("Historial Ventas", self.abrir_historial_ventas)
+            )
+
+        if self.permisos.get("control_inventario", False):
+            opciones.append(
+                ("Control Inventario", self.abrir_control_inventario)
+            )
+
+        if self.permisos.get("estadisticas", False):
+            opciones.append(
+                ("Estadísticas", self.abrir_estadisticas)
+            )
+
+        if self.permisos.get("stock_bajo", False):
+            opciones.append(
+                ("Stock Bajo", self.abrir_stock_bajo)
+            )
+
+        if self.permisos.get("reiniciar", False):
+            opciones.append(
+                ("Reiniciar Sistema", self.confirmar_reinicio)
+            )
+
+
 
         for texto, accion in opciones:
 
@@ -1226,19 +1474,8 @@ class VentasWindow(BoxLayout):
 
 
     def admin(self):
-        contenido = Label(
-            text=(
-                "Nombre: Administrador\n\n"
-                "Usuario: admin\n\n"
-                "Rol: Administrador"
-            )
-        )
 
-        popup = Popup(
-            title="Perfil de Usuario",
-            content=contenido,
-            size_hint=(0.45,0.45)
-        )
+        popup = PermisosUsuariosPopup()
 
         popup.open()
 #-------------------------

@@ -1039,3 +1039,235 @@
             size_hint_y: None
             height: "40dp"
             on_release: root.dismiss()
+
+# ------------------------------
+# GESTIÓN DE USUARIOS Y PERMISOS
+# ------------------------------
+
+<PermisosUsuariosPopup>:
+    title: "Gestión de Usuarios y Permisos"
+    size_hint: 0.75, 0.80
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 20
+        spacing: 10
+
+        Label:
+            text: "GESTIÓN DE USUARIOS"
+            font_size: "22sp"
+            bold: True
+            color: 0, 0, 0, 1
+            size_hint_y: None
+            height: "45dp"
+
+        BoxLayout:
+            size_hint_y: None
+            height: "45dp"
+            spacing: 10
+
+            Label:
+                text: "Usuario:"
+                color: 0, 0, 0, 1
+                size_hint_x: 0.25
+
+            Spinner:
+                id: usuario_spinner
+                text: "Seleccionar usuario"
+                values: []
+                size_hint_x: 0.75
+                on_text: root.seleccionar_usuario(self.text)
+
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+
+            Label:
+                text: "Rol:"
+                color: 0, 0, 0, 1
+                size_hint_x: 0.25
+
+            Label:
+                id: rol_usuario
+                text: "-"
+                color: 0, 0, 0, 1
+                bold: True
+                size_hint_x: 0.75
+
+        Label:
+            text: "PERMISOS"
+            font_size: "18sp"
+            bold: True
+            color: 0, 0, 0, 1
+            size_hint_y: None
+            height: "35dp"
+
+        ScrollView:
+            size_hint_y: 1
+
+            GridLayout:
+                cols: 2
+                spacing: 8
+                padding: 10
+                size_hint_y: None
+                height: self.minimum_height
+                row_default_height: "35dp"
+
+                CheckBox:
+                    id: permiso_agregar_inventario
+                    
+
+                Label:
+                    text: "Agregar Inventario"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_ver_inventario
+                    
+
+                Label:
+                    text: "Ver Inventario"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_editar_inventario
+                    
+
+                Label:
+                    text: "Editar Inventario"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_eliminar_inventario
+                    
+
+                Label:
+                    text: "Eliminar Inventario"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_registrar_venta
+                   
+
+                Label:
+                    text: "Registrar Venta"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_historial
+                    
+
+                Label:
+                    text: "Ver Historial de Ventas"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_eliminar_venta
+                    
+
+                Label:
+                    text: "Eliminar Venta"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_reimprimir_factura
+                   
+
+                Label:
+                    text: "Reimprimir Factura"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_control_inventario
+                    
+
+                Label:
+                    text: "Control de Inventario"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_estadisticas
+                    group: ""
+
+                Label:
+                    text: "Estadísticas"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_stock_bajo
+                    
+
+                Label:
+                    text: "Stock Bajo"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_usuarios
+                    
+
+                Label:
+                    text: "Gestionar Usuarios"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+                CheckBox:
+                    id: permiso_reiniciar
+                    
+
+                Label:
+                    text: "Reiniciar Sistema"
+                    color: 0, 0, 0, 1
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: "50dp"
+            spacing: 10
+
+            Button:
+                text: "Guardar permisos"
+                background_color: 0.1, 0.6, 0.3, 1
+                on_release: root.guardar_permisos()
+
+            Button:
+                text: "Cerrar"
+                background_color: 0.7, 0.2, 0.2, 1
+                on_release: root.dismiss()

@@ -1,5 +1,20 @@
 import sqlite3
 
+PERMISOS_DISPONIBLES = [
+    "agregar_inventario",
+    "ver_inventario",
+    "editar_inventario",
+    "eliminar_inventario",
+    "registrar_venta",
+    "ver_historial",
+    "eliminar_venta",
+    "reimprimir_factura",
+    "control_inventario",
+    "estadisticas",
+    "stock_bajo",
+    "usuarios",
+    "reiniciar"
+]
 def conectar():
     return sqlite3.connect("inventario.db")
 
@@ -8,6 +23,7 @@ def crear_tabla():
 
     conexion = conectar()
     cursor = conexion.cursor()
+
 #tabla productos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS productos (
@@ -53,8 +69,18 @@ def crear_tabla():
         rol TEXT NOT NULL)
     """) 
 
+# Tabla de permisos por usuario
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS permisos_usuario (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            permiso TEXT NOT NULL,
+            permitido INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+            UNIQUE(usuario_id, permiso)
+        )
+    """)
     
-
 # Crear administrador por defecto
     cursor.execute("""
     SELECT COUNT(*) FROM usuarios
@@ -482,11 +508,125 @@ def crear_usuario(nombre, usuario, contraseña, rol):
 
     conexion = conectar()
     cursor = conexion.cursor()
+    try: 
+        cursor.execute("""
+        INSERT INTO usuarios(nombre,usuario,contraseña,rol)
+        VALUES(?,?,?,?)
+        """,(nombre,usuario,contraseña,rol))
+
+        conexion.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+    finally:
+        conexion.close()
+
+#funcion para guardar los permisos
+
+def establecer_permiso(usuario_id, permiso, permitido):
+    conexion = conectar()
+    cursor = conexion.cursor()
 
     cursor.execute("""
-    INSERT INTO usuarios(nombre,usuario,contraseña,rol)
-    VALUES(?,?,?,?)
-    """,(nombre,usuario,contraseña,rol))
+        INSERT INTO permisos_usuario (usuario_id, permiso, permitido)
+        VALUES (?, ?, ?)
+        ON CONFLICT(usuario_id, permiso)
+        DO UPDATE SET permitido = excluded.permitido
+    """, (usuario_id, permiso, 1 if permitido else 0))
+
+    conexion.commit()
+    conexion.close()
+
+#funcion para consultar si el usuario tiene permisos
+
+def tiene_permiso(usuario_id, permiso):
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT permitido
+        FROM permisos_usuario
+        WHERE usuario_id = ? AND permiso = ?
+    """, (usuario_id, permiso))
+
+    resultado = cursor.fetchone()
+
+    conexion.close()
+
+    if resultado:
+        return resultado[0] == 1
+
+    return False
+#funcion para obtener todos los permisos de usuario
+
+def obtener_permisos_usuario(usuario_id):
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT permiso, permitido
+        FROM permisos_usuario
+        WHERE usuario_id = ?
+    """, (usuario_id,))
+
+    resultados = cursor.fetchall()
+
+    conexion.close()
+
+    return resultados
+
+#funcion para obtener el id de usuario
+
+def obtener_usuario_por_nombre_usuario(usuario):
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT id, nombre, usuario, rol
+        FROM usuarios
+        WHERE usuario = ?
+    """, (usuario,))
+
+    resultado = cursor.fetchone()
+
+    conexion.close()
+
+    return resultado
+
+# Obtener todos los usuarios del sistema
+
+def obtener_usuarios():
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT id, nombre, usuario, rol
+        FROM usuarios
+        ORDER BY nombre
+    """)
+
+    resultados = cursor.fetchall()
+
+    conexion.close()
+
+    return resultados
+
+#funcion para guardar todos los permisos de una vez 
+
+def guardar_permisos_usuario(usuario_id, permisos):
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    for permiso in PERMISOS_DISPONIBLES:
+        permitido = 1 if permiso in permisos else 0
+
+        cursor.execute("""
+            INSERT INTO permisos_usuario (usuario_id, permiso, permitido)
+            VALUES (?, ?, ?)
+            ON CONFLICT(usuario_id, permiso)
+            DO UPDATE SET permitido = excluded.permitido
+        """, (usuario_id, permiso, permitido))
 
     conexion.commit()
     conexion.close()

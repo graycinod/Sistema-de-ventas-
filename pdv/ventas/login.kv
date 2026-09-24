@@ -78,6 +78,15 @@
 
                 on_release:
                     root.iniciar_sesion()
+            Button:
+                text: "Registrar nuevo usuario"
+                size_hint_y: None
+                height: "45dp"
+                background_normal: ""
+                background_color: .25,.55,.35,1
+
+                on_release:
+                    root.abrir_registro()
 
             Widget:
 
@@ -87,3 +96,83 @@
                 halign: "center"
                 bold: True
                 color: 1,1,1,1
+
+<RegistroUsuarioPopup>:
+
+    title: "REGISTRAR NUEVO USUARIO"
+    size_hint: .75, .75
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 25
+        spacing: 15
+
+        Label:
+            text: "CREAR NUEVO USUARIO"
+            font_size: "24sp"
+            bold: True
+            color: 1,1,1,1
+            size_hint_y: None
+            height: "45dp"
+
+        TextInput:
+            id: txt_nombre
+            hint_text: "Nombre completo"
+            multiline: False
+            size_hint_y: None
+            height: "45dp"
+
+        TextInput:
+            id: txt_nuevo_usuario
+            hint_text: "Nombre de usuario"
+            multiline: False
+            size_hint_y: None
+            height: "45dp"
+
+        TextInput:
+            id: txt_nueva_password
+            hint_text: "Contraseña"
+            multiline: False
+            password: True
+            size_hint_y: None
+            height: "45dp"
+
+        TextInput:
+            id: txt_confirmar_password
+            hint_text: "Confirmar contraseña"
+            multiline: False
+            password: True
+            size_hint_y: None
+            height: "45dp"
+
+        Label:
+            text: "Rol: Vendedor"
+            font_size: "16sp"
+            color: 1,1,1,1
+            size_hint_y: None
+            height: "40dp"
+
+        Widget:
+
+        BoxLayout:
+            orientation: "horizontal"
+            spacing: 10
+            size_hint_y: None
+            height: "50dp"
+
+            Button:
+                text: "Registrar"
+                background_normal: ""
+                background_color: .18,.55,.35,1
+
+                on_release:
+                    root.registrar_usuario()
+
+            Button:
+                text: "Cancelar"
+                background_normal: ""
+                background_color: .65,.20,.20,1
+
+                on_release:
+                    root.dismiss()
